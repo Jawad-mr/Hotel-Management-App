@@ -221,7 +221,7 @@ function seedDatabase() {
   let baseChargeId = 20006;
   let basePaymentId = 30003;
 
-  for (let i = 45; i >= 3; i--) {
+  for (let i = 45; i >= 0; i--) {
     // Generate 1-2 checkouts per day
     const checkoutDay = dMinus(i);
     const checkinDay = dMinus(i + Math.floor(Math.random() * 3) + 1); // 1-3 nights stay

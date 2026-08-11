@@ -306,9 +306,14 @@
     renderTopNav('home');
     renderBottomNav('home');
 
-    document.getElementById('userNameLabel').textContent = user.name;
-    document.getElementById('currentDateLabel').textContent = today();
-    document.getElementById('userRoleBadge').textContent = user.role;
+    if (user) {
+      const elName = document.getElementById('userNameLabel');
+      if (elName) elName.textContent = user.name;
+      const elDate = document.getElementById('currentDateLabel');
+      if (elDate) elDate.textContent = today();
+      const elRole = document.getElementById('userRoleBadge');
+      if (elRole) elRole.textContent = user.role;
+    }
 
     // Permissions check
     const isHousekeeper = user.role === 'Housekeeping';
