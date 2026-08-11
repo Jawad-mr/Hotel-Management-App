@@ -362,8 +362,14 @@
       const last7 = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(); d.setDate(d.getDate() - (6 - i));
         const dStr = d.toISOString().slice(0, 10);
+        const localStr = d.toLocaleDateString('en-CA');
+        const dateMatch = d.toDateString();
         const l = d.toLocaleDateString('en-IN', { weekday: 'short' });
-        const v = payments.filter(p => p.date && p.date.startsWith(dStr)).reduce((sum, p) => sum + (p.amount || 0), 0);
+        const v = payments.filter(p => {
+          if (!p.date) return false;
+          const pStr = String(p.date).slice(0, 10);
+          return pStr === dStr || pStr === localStr || new Date(p.date).toDateString() === dateMatch;
+        }).reduce((sum, p) => sum + (p.amount || 0), 0);
         return { l, v };
       });
       document.getElementById('sevenDayRevenueLabel').textContent = fmt(last7.reduce((sum, d) => sum + d.v, 0));

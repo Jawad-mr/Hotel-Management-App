@@ -38,7 +38,8 @@ const DEFAULT_CONFIG = {
 function seedDatabase() {
   const existingRooms = DB.get('rooms', []);
   const existingUsers = DB.get('users', []);
-  if (DB.get('initialized', false) && existingRooms.length > 0 && existingUsers.length > 0) return;
+  const existingPayments = DB.get('payments', []);
+  if (DB.get('initialized', false) && existingRooms.length > 0 && existingUsers.length > 0 && existingPayments.length > 0) return;
 
   // 1. Config
   DB.set('hotelConfig', DEFAULT_CONFIG);
@@ -392,9 +393,10 @@ function genId() {
 
 function isToday(dateStr) {
   if (!dateStr) return false;
-  const d = new Date(dateStr).toDateString();
-  const t = new Date().toDateString();
-  return d === t;
+  const s = String(dateStr).slice(0, 10);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayLocal = new Date().toLocaleDateString('en-CA');
+  return s === todayIso || s === todayLocal || new Date(dateStr).toDateString() === new Date().toDateString();
 }
 
 function isMonth(dateStr) {
