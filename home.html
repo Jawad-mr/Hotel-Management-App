@@ -316,8 +316,8 @@
     }
 
     // Permissions check
-    const isHousekeeper = user.role === 'Housekeeping';
-    const isReceptionist = user.role === 'Receptionist';
+    const isHousekeeper = user && user.role === 'Housekeeping';
+    const isReceptionist = user && user.role === 'Receptionist';
 
     if (isHousekeeper) {
       if (document.getElementById('qaBook')) document.getElementById('qaBook').style.display = 'none';

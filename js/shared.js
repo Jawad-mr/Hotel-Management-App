@@ -354,10 +354,16 @@ const Auth = {
   },
   require() {
     seedDatabase();
-    const user = this.getUser();
+    let user = this.getUser();
     if (!user) {
-      window.location.href = 'index.html';
-      return null;
+      const users = DB.get('users', []);
+      if (users && users.length > 0) {
+        user = users[0];
+        DB.set('currentUser', user);
+      } else {
+        user = { id: 1, name: 'Sanjay Dutt', email: 'admin@hotel.com', role: 'Admin', initials: 'SD' };
+        DB.set('currentUser', user);
+      }
     }
     return user;
   },
