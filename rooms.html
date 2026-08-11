@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Rooms Setup</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .room-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#0f172a;--hero-mid:#1e293b;--hero-to:#334155">
+      <div>
+        <div class="page-hero__title">Rooms Directory</div>
+        <div class="page-hero__sub">Inspect physical rooms layout, manage cleaning tasks, configure room types, and report maintenance issues</div>
+      </div>
+      <div style="display:flex;gap:8px" id="adminButtons">
+        <button class="btn btn-secondary" onclick="openRoomTypeModal()">+ Configure Room Type</button>
+        <button class="btn btn-primary" onclick="openRoomModal()">+ Add Physical Room</button>
+      </div>
+    </div>
+
+    <!-- Stats Count widgets -->
+    <div class="stat-grid mb-20" id="roomStats"></div>
+
+    <!-- Filters Row -->
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div class="chip-group" id="statusChips">
+        <button class="chip active" onclick="setStatusFilter('All')">All Statuses</button>
+        <button class="chip" onclick="setStatusFilter('Available')">Available</button>
+        <button class="chip" onclick="setStatusFilter('Occupied')">Occupied</button>
+        <button class="chip" onclick="setStatusFilter('Reserved')">Reserved</button>
+        <button class="chip" onclick="setStatusFilter('Cleaning')">Cleaning (Dirty)</button>
+        <button class="chip" onclick="setStatusFilter('Maintenance')">Maintenance</button>
+      </div>
+      <div style="flex:1"></div>
+      
+      <!-- Tab toggler -->
+      <button class="btn btn-ghost btn-sm" onclick="switchTabs('rooms')" id="tabRoomsBtn" style="border-bottom:2px solid var(--c-gold)">Rooms Grid</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchTabs('types')" id="tabTypesBtn">Room Types</button>
+    </div>
+
+    <!-- TAB 1: Rooms Grid Layout -->
+    <div id="roomsPanel">
+      <div class="rooms-grid" id="roomsContainer"></div>
+    </div>
+
+    <!-- TAB 2: Room Types Configuration -->
+    <div id="typesPanel" class="hidden">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Room Type Title</th>
+              <th>Capacity</th>
+              <th>Base Price</th>
+              <th>Amenities Configured</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="typesContainer"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Physical Room Modal -->
+  <div class="modal-overlay" id="roomModal">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <div class="modal-title" id="roomModalTitle">Add Physical Room</div>
+        <button class="modal-close" onclick="closeRoomModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Room Number / Label</label>
+          <input type="text" class="form-control" id="roomNo" placeholder="e.g. 105">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Room Type Category</label>
+          <select class="form-control" id="roomTypeSelect" onchange="syncRoomTypePrice()"></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Floor</label>
+            <select class="form-control" id="roomFloor">
+              <option value="1st Floor">1st Floor</option>
+              <option value="2nd Floor">2nd Floor</option>
+              <option value="3rd Floor">3rd Floor</option>
+              <option value="4th Floor">4th Floor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Custom Price per Night (₹)</label>
+            <input type="number" class="form-control" id="roomPrice" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description / Features</label>
+          <input type="text" class="form-control" id="roomDesc" placeholder="e.g. Corner room facing the valley">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveRoomBtn">Save Room</button>
+          <button class="btn btn-ghost" onclick="closeRoomModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Type Modal -->
+  <div class="modal-overlay" id="typeModal">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-header">
+        <div class="modal-title" id="typeModalTitle">Configure Room Type</div>
+        <button class="modal-close" onclick="closeRoomTypeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Type Name</label>
+          <input type="text" class="form-control" id="typeName" placeholder="e.g. Honeymoon Suite">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Max Capacity (Guests)</label>
+            <input type="number" class="form-control" id="typeCap" placeholder="2" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Base Rate per Night (₹)</label>
+            <input type="number" class="form-control" id="typePrice" placeholder="5000" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amenities (Comma separated)</label>
+          <input type="text" class="form-control" id="typeAmenities" placeholder="Wi-Fi, AC, TV, Jacuzzi">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Short Description</label>
+          <input type="text" class="form-control" id="typeDesc" placeholder="e.g. Special suite for couples with private tub">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveTypeBtn">Save Room Type</button>
+          <button class="btn btn-ghost" onclick="closeRoomTypeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Details & Action modal -->
+  <div class="modal-overlay" id="roomActionModal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <div class="modal-title" id="actionModalTitle">Room Details</div>
+        <button class="modal-close" onclick="closeActionModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="actionModalBody" style="margin-bottom:20px"></div>
+        <div class="room-actions" id="actionModalButtons"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Issue modal -->
+  <div class="modal-overlay" id="issueModal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <div class="modal-title">Log Maintenance Issue</div>
+        <button class="modal-close" onclick="closeIssueModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Issue Title / Short label</label>
+          <input type="text" class="form-control" id="issueName" placeholder="e.g. AC not cooling">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-control" id="issuePriority">
+            <option value="Low">Low Priority</option>
+            <option value="Medium" selected>Medium Priority</option>
+            <option value="High">High Priority (Urgent)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Remarks Description</label>
+          <input type="text" class="form-control" id="issueDesc" placeholder="e.g. Remote sensor is broken, fan is vibrating">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-danger style=flex:1" id="saveIssueBtn">Log Issue & Lock Room</button>
+          <button class="btn btn-ghost" onclick="closeIssueModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('rooms');
+    renderBottomNav('rooms');
+
+    const isManager = Auth.can('Manager');
+    if (!isManager) {
+      document.getElementById('adminButtons').style.display = 'none';
+    }
+
+    let activeTab = 'rooms';
+    let filterStatus = 'All';
+    let selectedRoomId = null;
+    let editingRoomId = null;
+    let editingTypeId = null;
+
+    function switchTabs(tab) {
+      activeTab = tab;
+      document.getElementById('roomsPanel').classList.toggle('hidden', tab !== 'rooms');
+      document.getElementById('typesPanel').classList.toggle('hidden', tab !== 'types');
+      document.getElementById('tabRoomsBtn').style.borderBottom = tab === 'rooms' ? '2px solid var(--c-gold)' : 'none';
+      document.getElementById('tabTypesBtn').style.borderBottom = tab === 'types' ? '2px solid var(--c-gold)' : 'none';
+      render();
+    }
+
+    function setStatusFilter(f) {
+      filterStatus = f;
+      document.querySelectorAll('#statusChips .chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().includes(f) || (f==='All' && btn.textContent.trim()==='All Statuses'));
+      });
+      render();
+    }
+
+    function populateRoomTypeSelect() {
+      const types = DB.get('roomTypes', []);
+      document.getElementById('roomTypeSelect').innerHTML = types.map(t =>
+        `<option value="${t.id}">${escapeHtml(t.name)} (Base ₹${t.basePrice})</option>`
+      ).join('');
+    }
+
+    function syncRoomTypePrice() {
+      const typeId = parseInt(document.getElementById('roomTypeSelect').value, 10);
+      const types = DB.get('roomTypes', []);
+      const t = types.find(x => x.id === typeId);
+      if (t) {
+        document.getElementById('roomPrice').value = t.basePrice;
+      }
+    }
+
+    function render() {
+      const rooms = DB.get('rooms', []);
+      const types = DB.get('roomTypes', []);
+      const reservations = DB.get('reservations', []);
+
+      // Stats calculations
+      const totalCount = rooms.length;
+      const availCount = rooms.filter(r => r.status === 'Available').length;
+      const occupiedCount = rooms.filter(r => r.status === 'Occupied').length;
+      const cleaningCount = rooms.filter(r => r.status === 'Cleaning').length;
+
+      document.getElementById('roomStats').innerHTML = [
+        { label: 'Total Rooms', value: totalCount, sub: 'configured setups', accent: 'var(--c-brand-soft)' },
+        { label: 'Available', value: availCount, sub: 'ready for check-in', accent: 'var(--c-success)' },
+        { label: 'Occupied', value: occupiedCount, sub: `${occupiedCount ? Math.round((occupiedCount/totalCount)*100) : 0}% current occupancy`, accent: 'var(--c-danger)' },
+        { label: 'Cleaning Queue', value: cleaningCount, sub: 'dirty rooms logged', accent: 'var(--c-info)' }
+      ].map(s => `
+        <div class="stat-card" style="--accent:${s.accent}">
+          <div class="stat-card__label">${s.label}</div>
+          <div class="stat-card__value">${s.value}</div>
+          <div class="stat-card__sub">${s.sub}</div>
+        </div>`).join('');
+
+      if (activeTab === 'rooms') {
+        const filtered = rooms.filter(r => filterStatus === 'All' || r.status === filterStatus);
+        const container = document.getElementById('roomsContainer');
+
+        if (!filtered.length) {
+          container.innerHTML = `<div style="grid-column:1/-1" class="empty-state"><div class="empty-state__title">No rooms match filter status</div></div>`;
+          return;
+        }
+
+        container.innerHTML = filtered.map(r => {
+          let statusCls = r.status.toLowerCase().replace(/ /g, '-');
+          let extraInfo = "";
+
+          if (r.status === 'Occupied') {
+            const activeStay = reservations.find(res => res.roomId === r.id && res.status === 'Checked In');
+            extraInfo = activeStay ? escapeHtml(activeStay.guestName) : "Guest In";
+          } else if (r.status === 'Reserved') {
+            const activeRes = reservations.find(res => res.roomId === r.id && res.status === 'Confirmed');
+            extraInfo = activeRes ? `${escapeHtml(activeRes.guestName)} (Soon)` : "Booked";
+          } else {
+            extraInfo = r.floor;
+          }
+
+          return `
+            <div class="room-card ${statusCls}" onclick="handleRoomClick(${r.id})">
+              <div class="room-card__number">Room ${r.roomNumber}</div>
+              <div class="room-card__type">${escapeHtml(r.roomTypeName)}</div>
+              <div class="room-card__price">${fmt(r.basePrice)}/n</div>
+              <div class="room-card__status" style="margin-top:10px">${r.status}</div>
+              <div class="text-xs text-soft" style="margin-top:2px">${extraInfo}</div>
+            </div>`;
+        }).join('');
+      } else {
+        // Types
+        const container = document.getElementById('typesContainer');
+        container.innerHTML = types.map(t => `
+          <tr>
+            <td><strong>${escapeHtml(t.name)}</strong></td>
+            <td>${t.capacity} Guests</td>
+            <td><span class="fw-700 text-brand">${fmt(t.basePrice)}</span></td>
+            <td>${t.amenities.map(a=>`<span class="badge badge-gray" style="margin:2px">${escapeHtml(a)}</span>`).join('')}</td>
+            <td><span class="text-xs text-soft">${escapeHtml(t.description || 'No description')}</span></td>
+            <td>
+              ${isManager ? `
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-secondary btn-sm" onclick="openRoomTypeModal(${t.id})">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteRoomType(${t.id},'${escapeHtml(t.name)}')">Delete</button>
+                </div>
+              ` : 'No Action'}
+            </td>
+          </tr>`).join('');
+      }
+    }
+
+    // Room Card click handler
+    function handleRoomClick(roomId) {
+      const rooms = DB.get('rooms', []);
+      const r = rooms.find(x => x.id === roomId);
+      if (!r) return;
+
+      selectedRoomId = roomId;
+      document.getElementById('actionModalTitle').textContent = `Room ${r.roomNumber} Management`;
+
+      let bodyHtml = `
+        <div class="text-sm">
+          <p style="margin-bottom:6px"><strong>Room Category:</strong> ${escapeHtml(r.roomTypeName)}</p>
+          <p style="margin-bottom:6px"><strong>Floor:</strong> ${r.floor}</p>
+          <p style="margin-bottom:6px"><strong>Capacity:</strong> Max ${r.capacity} Guests</p>
+          <p style="margin-bottom:6px"><strong>Nightly Rate:</strong> <span class="fw-700 text-brand">${fmt(r.basePrice)}</span></p>
+          <p style="margin-bottom:6px"><strong>Amenities:</strong> ${r.amenities ? r.amenities.join(', ') : 'None'}</p>
+          <p style="margin-bottom:6px"><strong>Current Status:</strong> <span class="badge ${r.status==='Available'?'badge-green':r.status==='Occupied'?'badge-red':r.status==='Cleaning'?'badge-purple':'badge-gray'}">${r.status}</span></p>
+        </div>`;
+
+      let buttonsHtml = "";
+
+      if (r.status === 'Available') {
+        buttonsHtml = `
+          <button class="btn btn-primary btn-full" onclick="startWalkinBooking()">Start Check-In / Booking</button>
+          <button class="btn btn-danger btn-full" onclick="triggerIssueModal()">Report Issue (Maintenance)</button>
+        `;
+      } else if (r.status === 'Cleaning') {
+        bodyHtml += `<p class="text-soft">Housekeeping cleaning requested.</p>`;
+        buttonsHtml = `
+          <button class="btn btn-success btn-full" onclick="markRoomClean(${r.id})">Mark Clean & Ready</button>
+          <button class="btn btn-danger btn-full" onclick="triggerIssueModal()">Report Issue (Maintenance)</button>
+        `;
+      } else if (r.status === 'Occupied') {
+        const reservations = DB.get('reservations', []);
+        const activeStay = reservations.find(res => res.roomId === r.id && res.status === 'Checked In');
+        if (activeStay) {
+          bodyHtml += `
+            <div style="background:var(--c-cream);padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:12px">
+              <div class="fw-700">${escapeHtml(activeStay.guestName)}</div>
+              <div class="text-soft text-xs">Stay: ${activeStay.checkInDate} to ${activeStay.checkOutDate}</div>
+            </div>`;
+          buttonsHtml = `
+            <a href="billing.html?resId=${activeStay.id}" class="btn btn-primary btn-full">Manage Room Charges / Bill</a>
+          `;
+        } else {
+          buttonsHtml = `<button class="btn btn-success btn-full" onclick="markRoomClean(${r.id})">Clear Occupancy</button>`;
+        }
+      } else if (r.status === 'Maintenance') {
+        buttonsHtml += `
+          <button class="btn btn-success btn-full" onclick="resolveRoomMaintenance(${r.id})">Resolve Issue & Release Room</button>
+        `;
+      } else if (r.status === 'Reserved') {
+        const reservations = DB.get('reservations', []);
+        const activeRes = reservations.find(res => res.roomId === r.id && res.status === 'Confirmed');
+        if (activeRes) {
+          bodyHtml += `
+            <div style="background:var(--c-cream);padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:12px">
+              <div class="fw-700">Reserved for ${escapeHtml(activeRes.guestName)}</div>
+              <div class="text-soft text-xs">Dates: ${activeRes.checkInDate} to ${activeRes.checkOutDate}</div>
+            </div>`;
+          buttonsHtml = `
+            <a href="reservations.html?id=${activeRes.id}" class="btn btn-primary btn-full">Open Reservation Details</a>
+          `;
+        }
+      }
+
+      if (isManager) {
+        buttonsHtml += `
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="btn btn-secondary btn-full btn-sm" onclick="openRoomModal(${r.id})">Edit Config</button>
+            <button class="btn btn-danger btn-full btn-sm" onclick="deleteRoomConfig(${r.id}, '${r.roomNumber}')">Delete Room</button>
+          </div>
+        `;
+      }
+
+      document.getElementById('actionModalBody').innerHTML = bodyHtml;
+      document.getElementById('actionModalButtons').innerHTML = buttonsHtml;
+      document.getElementById('roomActionModal').classList.add('open');
+    }
+
+    function closeActionModal() {
+      document.getElementById('roomActionModal').classList.remove('open');
+      selectedRoomId = null;
+    }
+
+    // Cleaning Clean Trigger
+    function markRoomClean(roomId) {
+      const rooms = DB.get('rooms', []);
+      const idx = rooms.findIndex(r => r.id === roomId);
+      if (idx !== -1) {
+        rooms[idx].status = 'Available';
+        DB.set('rooms', rooms);
+        toast(`Room ${rooms[idx].roomNumber} marked as clean and ready`, 'success');
+        closeActionModal();
+        render();
+      }
+    }
+
+    // Start Walk-In booking redirects
+    function startWalkinBooking() {
+      if (!selectedRoomId) return;
+      window.location.href = `reservations.html?roomId=${selectedRoomId}&walkin=true`;
+    }
+
+    // Physical Room Add/Edit
+    function openRoomModal(id = null) {
+      closeActionModal();
+      editingRoomId = id;
+      populateRoomTypeSelect();
+      document.getElementById('roomModalTitle').textContent = id ? 'Edit Room Settings' : 'Add Physical Room';
+
+      if (id) {
+        const rooms = DB.get('rooms', []);
+        const r = rooms.find(x => x.id === id);
+        if (r) {
+          document.getElementById('roomNo').value = r.roomNumber;
+          document.getElementById('roomTypeSelect').value = r.roomTypeId;
+          document.getElementById('roomFloor').value = r.floor;
+          document.getElementById('roomPrice').value = r.basePrice;
+          document.getElementById('roomDesc').value = r.description || "";
+        }
+      } else {
+        document.getElementById('roomNo').value = "";
+        document.getElementById('roomDesc').value = "";
+        syncRoomTypePrice();
+      }
+      document.getElementById('roomModal').classList.add('open');
+    }
+
+    function closeRoomModal() {
+      document.getElementById('roomModal').classList.remove('open');
+      editingRoomId = null;
+    }
+
+    document.getElementById('saveRoomBtn').addEventListener('click', () => {
+      const number = document.getElementById('roomNo').value.trim();
+      const typeId = parseInt(document.getElementById('roomTypeSelect').value, 10);
+      const floor = document.getElementById('roomFloor').value;
+      const price = parseFloat(document.getElementById('roomPrice').value);
+      const desc = document.getElementById('roomDesc').value.trim();
+
+      if (!number || Number.isNaN(price) || price < 0) {
+        toast('Please enter a valid room number and nightly rate', 'error');
+        return;
+      }
+
+      const rooms = DB.get('rooms', []);
+      const types = DB.get('roomTypes', []);
+      const type = types.find(t => t.id === typeId);
+      if (!type) return;
+
+      // Duplicate check
+      const dup = rooms.some(r => r.id !== editingRoomId && r.roomNumber.toLowerCase() === number.toLowerCase());
+      if (dup) {
+        toast('Room number already exists', 'error');
+        return;
+      }
+
+      if (editingRoomId) {
+        const idx = rooms.findIndex(r => r.id === editingRoomId);
+        if (idx !== -1) {
+          rooms[idx] = { 
+            ...rooms[idx], 
+            roomNumber: number, 
+            roomTypeId: typeId, 
+            roomTypeName: type.name, 
+            floor, 
+            basePrice: price, 
+            description: desc,
+            capacity: type.capacity,
+            amenities: [...type.amenities]
+          };
+          toast('Room config updated', 'success');
+        }
+      } else {
+        rooms.push({
+          id: Date.now(),
+          roomNumber: number,
+          roomTypeId: typeId,
+          roomTypeName: type.name,
+          floor,
+          capacity: type.capacity,
+          basePrice: price,
+          status: 'Available',
+          amenities: [...type.amenities],
+          description: desc
+        });
+        toast('New room registered in property grid', 'success');
+      }
+
+      DB.set('rooms', rooms);
+      closeRoomModal();
+      render();
+    });
+
+    function deleteRoomConfig(id, label) {
+      const conf = confirm(`Delete Room ${label} permanently? Existing reservations linked will cause errors.`);
+      if (!conf) return;
+
+      const rooms = DB.get('rooms', []);
+      const updated = rooms.filter(r => r.id !== id);
+      DB.set('rooms', updated);
+      toast(`Room ${label} deleted`, 'success');
+      closeActionModal();
+      render();
+    }
+
+    // Room Type Config Add/Edit
+    function openRoomTypeModal(id = null) {
+      closeActionModal();
+      editingTypeId = id;
+      document.getElementById('typeModalTitle').textContent = id ? 'Edit Room Type Config' : 'Configure Room Type';
+
+      if (id) {
+        const types = DB.get('roomTypes', []);
+        const t = types.find(x => x.id === id);
+        if (t) {
+          document.getElementById('typeName').value = t.name;
+          document.getElementById('typeCap').value = t.capacity;
+          document.getElementById('typePrice').value = t.basePrice;
+          document.getElementById('typeAmenities').value = t.amenities.join(', ');
+          document.getElementById('typeDesc').value = t.description || "";
+        }
+      } else {
+        document.getElementById('typeName').value = "";
+        document.getElementById('typeCap').value = "2";
+        document.getElementById('typePrice').value = "";
+        document.getElementById('typeAmenities').value = "Wi-Fi, AC, TV";
+        document.getElementById('typeDesc').value = "";
+      }
+      document.getElementById('typeModal').classList.add('open');
+    }
+
+    function closeRoomTypeModal() {
+      document.getElementById('typeModal').classList.remove('open');
+      editingTypeId = null;
+    }
+
+    document.getElementById('saveTypeBtn').addEventListener('click', () => {
+      const name = document.getElementById('typeName').value.trim();
+      const cap = parseInt(document.getElementById('typeCap').value, 10);
+      const price = parseFloat(document.getElementById('typePrice').value);
+      const amenitiesStr = document.getElementById('typeAmenities').value;
+      const desc = document.getElementById('typeDesc').value.trim();
+
+      if (!name || Number.isNaN(cap) || cap <= 0 || Number.isNaN(price) || price < 0) {
+        toast('Please enter valid room type name, capacity and rate', 'error');
+        return;
+      }
+
+      const types = DB.get('roomTypes', []);
+      const amenities = amenitiesStr.split(',').map(a => a.trim()).filter(Boolean);
+
+      if (editingTypeId) {
+        const idx = types.findIndex(t => t.id === editingTypeId);
+        if (idx !== -1) {
+          types[idx] = { ...types[idx], name, capacity: cap, basePrice: price, amenities, description: desc };
+          toast('Room category updated', 'success');
+        }
+      } else {
+        types.push({
+          id: Date.now(),
+          name,
+          capacity: cap,
+          basePrice: price,
+          amenities,
+          description: desc
+        });
+        toast('Room category registered', 'success');
+      }
+
+      DB.set('roomTypes', types);
+      closeRoomTypeModal();
+      render();
+    });
+
+    function deleteRoomType(id, label) {
+      const conf = confirm(`Delete Room Type "${label}"? This does not delete rooms assigned to it.`);
+      if (!conf) return;
+
+      const types = DB.get('roomTypes', []);
+      const updated = types.filter(t => t.id !== id);
+      DB.set('roomTypes', updated);
+      toast('Room category removed', 'success');
+      render();
+    }
+
+    // Maintenance logs report
+    function triggerIssueModal() {
+      closeActionModal();
+      document.getElementById('issueName').value = "";
+      document.getElementById('issueDesc').value = "";
+      document.getElementById('issueModal').classList.add('open');
+    }
+
+    function closeIssueModal() {
+      document.getElementById('issueModal').classList.remove('open');
+    }
+
+    document.getElementById('saveIssueBtn').addEventListener('click', () => {
+      const issue = document.getElementById('issueName').value.trim();
+      const priority = document.getElementById('issuePriority').value;
+      const desc = document.getElementById('issueDesc').value.trim();
+
+      if (!issue || !desc) {
+        toast('Please enter a short issue label and details description', 'error');
+        return;
+      }
+
+      const maintenance = DB.get('maintenance', []);
+      const rooms = DB.get('rooms', []);
+
+      const idx = rooms.findIndex(r => r.id === selectedRoomId);
+      if (idx === -1) return;
+
+      // Lock room
+      rooms[idx].status = 'Maintenance';
+      
+      const newTicket = {
+        id: Date.now(),
+        roomId: selectedRoomId,
+        roomNumber: rooms[idx].roomNumber,
+        issue,
+        description: desc,
+        priority,
+        status: 'Open',
+        createdDate: new Date().toISOString().slice(0, 10),
+        resolvedDate: null
+      };
+
+      maintenance.unshift(newTicket);
+
+      DB.set('rooms', rooms);
+      DB.set('maintenance', maintenance);
+      
+      toast(`Room ${rooms[idx].roomNumber} locked under Maintenance ticket.`, 'info');
+      closeIssueModal();
+      render();
+    });
+
+    function resolveRoomMaintenance(roomId) {
+      const rooms = DB.get('rooms', []);
+      const maintenance = DB.get('maintenance', []);
+
+      const rIdx = rooms.findIndex(r => r.id === roomId);
+      if (rIdx === -1) return;
+
+      rooms[rIdx].status = 'Cleaning'; // goes to cleaning before available
+      
+      const ticket = maintenance.find(t => t.roomId === roomId && t.status !== 'Resolved');
+      if (ticket) {
+        ticket.status = 'Resolved';
+        ticket.resolvedDate = new Date().toISOString().slice(0, 10);
+      }
+
+      DB.set('rooms', rooms);
+      DB.set('maintenance', maintenance);
+      
+      toast(`Issue resolved. Room ${rooms[rIdx].roomNumber} released to Cleaning.`, 'success');
+      closeActionModal();
+      render();
+    }
+
+    // Modal click outs
+    document.getElementById('roomModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('roomModal')) closeRoomModal();
+    });
+    document.getElementById('typeModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('typeModal')) closeRoomTypeModal();
+    });
+    document.getElementById('roomActionModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('roomActionModal')) closeActionModal();
+    });
+    document.getElementById('issueModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('issueModal')) closeIssueModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Settings</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--c-text);
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--c-text-soft);
+      margin-top: 2px;
+    }
+
+    .brand-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--c-border-soft);
+      border-radius: var(--radius-md);
+      background: var(--c-cream);
+      margin-bottom: 14px;
+    }
+
+    .brand-preview__logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--c-brand-mid), var(--c-brand-soft));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .brand-preview__name {
+      font-family: var(--font-display);
+      font-size: 16.5px;
+      font-weight: 700;
+      color: var(--c-text);
+      line-height: 1.2;
+    }
+
+    .user-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .edit-box {
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-sm);
+      background: var(--c-cream);
+      padding: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .edit-box.open { display: block; }
+
+    .edit-box__title {
+      font-size: 11px;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: var(--c-text-soft);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .table td .email {
+      font-size: 11.5px;
+      color: var(--c-text-soft);
+      margin-top: 2px;
+    }
+
+    .guard-wrap {
+      max-width: 600px;
+      margin: 80px auto;
+    }
+
+    @media (max-width: 900px) {
+      .user-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap" id="settingsPage">
+    <div class="page-hero" style="--hero-from:#78350f;--hero-mid:#b45309;--hero-to:#d97706">
+      <div>
+        <div class="page-hero__title">Admin System Settings</div>
+        <div class="page-hero__sub">Configure hotel details, check-in timelines, tax rates, print receipts, and manage staff accounts</div>
+      </div>
+    </div>
+
+    <div class="settings-grid">
+      <!-- BRANDING SETUP -->
+      <div class="card card-padded">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Property Branding & Invoicing Configuration</div>
+            <div class="card-sub">Configure hotel name, contact details, currency, default GST tax rate, and standard checkout hours</div>
+          </div>
+        </div>
+
+        <div class="brand-preview">
+          <div class="brand-preview__logo" id="brandPreviewLogo">🏰</div>
+          <div>
+            <div class="brand-preview__name" id="brandPreviewName">The Grand Imperial Resort</div>
+            <div class="text-xs text-soft">Live Display Preview</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Hotel Name</label>
+            <input type="text" class="form-control" id="resName" placeholder="e.g. The Grand Imperial Resort">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Logo / Emoji Icon</label>
+            <input type="text" class="form-control" id="resLogo" placeholder="e.g. 🏰 or 🏨">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telephone</label>
+            <input type="text" class="form-control" id="resPhone" placeholder="e.g. +91 98765 43210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" id="resEmail" placeholder="e.g. contact@grandimperial.com">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Business Address</label>
+            <input type="text" class="form-control" id="resAddress" placeholder="Address">
+          </div>
+          <div class="grid-2" style="grid-column:1/-1">
+            <div class="form-group">
+              <label class="form-label">Default Currency Symbol</label>
+              <input type="text" class="form-control" id="resCurrency" placeholder="e.g. ₹ or $">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Taxes / GST Rate (%)</label>
+              <input type="number" class="form-control" id="resTax" placeholder="12" min="0" max="100">
+            </div>
+          </div>
+          <div class="grid-2" style="grid-column:1/-1">
+            <div class="form-group">
+              <label class="form-label">Check-In Hour Limit</label>
+              <input type="time" class="form-control" id="resInTime">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Check-Out Hour Limit</label>
+              <input type="time" class="form-control" id="resOutTime">
+            </div>
+          </div>
+          <div style="grid-column:1/-1" class="divider"></div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Receipt Header Message</label>
+            <input type="text" class="form-control" id="resHeader" placeholder="Header title text">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Receipt Footer Note</label>
+            <input type="text" class="form-control" id="resFooter" placeholder="Footer notes text">
+          </div>
+        </div>
+
+        <div class="flex gap-8" style="justify-content:flex-end">
+          <button class="btn btn-secondary" id="resetBrandBtn">Reset to Default</button>
+          <button class="btn btn-primary" id="saveBrandBtn">Save System Config</button>
+        </div>
+      </div>
+
+      <!-- STAFF ACCOUNTS MANAGEMENT -->
+      <div class="card card-padded">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Staff Accounts Controller</div>
+            <div class="card-sub">Create, remove, or modify roles and credentials for receptionist desk or housekeeping staff</div>
+          </div>
+        </div>
+
+        <!-- Add staff user form -->
+        <div class="user-grid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="newUserName" placeholder="e.g. Karan Singh">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" id="newUserEmail" placeholder="name@hotel.com">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" id="newUserPassword" placeholder="Min. 4 characters">
+          </div>
+          <div class="form-group" style="margin:0;min-width:140px">
+            <label class="form-label">Access Role</label>
+            <select class="form-control" id="newUserRole">
+              <option value="Receptionist">Receptionist (Front Desk)</option>
+              <option value="Housekeeping">Housekeeping Staff</option>
+              <option value="Manager">Manager</option>
+              <option value="Admin">Administrator</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex" style="justify-content:flex-end;margin-bottom:16px">
+          <button class="btn btn-primary" id="addUserBtn">+ Add Staff User</button>
+        </div>
+
+        <!-- Inline User Edit Box -->
+        <div class="edit-box" id="editBox">
+          <div class="edit-box__title">Edit Staff User Account</div>
+          <div class="user-grid" style="margin-bottom:10px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" id="editUserName">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Email Address</label>
+              <input type="email" class="form-control" id="editUserEmail">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Update Password (Optional)</label>
+              <input type="password" class="form-control" id="editUserPassword" placeholder="Blank to keep current">
+            </div>
+            <div class="form-group" style="margin:0;min-width:140px">
+              <label class="form-label">Access Role</label>
+              <select class="form-control" id="editUserRole">
+                <option value="Receptionist">Receptionist</option>
+                <option value="Housekeeping">Housekeeping</option>
+                <option value="Manager">Manager</option>
+                <option value="Admin">Administrator</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-8" style="justify-content:flex-end">
+            <button class="btn btn-ghost" id="cancelEditBtn">Cancel</button>
+            <button class="btn btn-primary" id="saveEditBtn">Save Changes</button>
+          </div>
+        </div>
+
+        <!-- Users list table -->
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>User Full Name</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role guard overlay -->
+  <div class="page-wrap guard-wrap hidden" id="guardView">
+    <div class="role-guard">
+      <div class="role-guard__icon">🔒</div>
+      <div class="role-guard__title">Access Restricted</div>
+      Settings panel is only available for Administrator users.
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const currentUser = Auth.require();
+    renderTopNav('settings');
+    renderBottomNav('more');
+
+    const isSystemAdmin = Auth.can('Admin');
+    if (!isSystemAdmin) {
+      document.getElementById('settingsPage').classList.add('hidden');
+      document.getElementById('guardView').classList.remove('hidden');
+      toast('Admin credentials required', 'error');
+      setTimeout(() => { window.location.href = 'home.html'; }, 1500);
+    }
+
+    const defaultBrand = DEFAULT_CONFIG;
+
+    function readBrand() {
+      return DB.get('hotelConfig', defaultBrand);
+    }
+
+    function syncBrandPreview(name, logo) {
+      document.getElementById('brandPreviewLogo').textContent = logo || defaultBrand.logo;
+      document.getElementById('brandPreviewName').textContent = name || defaultBrand.name;
+    }
+
+    function hydrateForm() {
+      const cfg = readBrand();
+      document.getElementById('resName').value = cfg.name;
+      document.getElementById('resLogo').value = cfg.logo;
+      document.getElementById('resPhone').value = cfg.phone;
+      document.getElementById('resEmail').value = cfg.email;
+      document.getElementById('resAddress').value = cfg.address;
+      document.getElementById('resTax').value = cfg.taxRate;
+      document.getElementById('resInTime').value = cfg.checkInTime || '14:00';
+      document.getElementById('resOutTime').value = cfg.checkOutTime || '11:00';
+      document.getElementById('resHeader').value = cfg.receiptHeader;
+      document.getElementById('resFooter').value = cfg.receiptFooter;
+      syncBrandPreview(cfg.name, cfg.logo);
+    }
+
+    document.getElementById('saveBrandBtn').addEventListener('click', () => {
+      const name = document.getElementById('resName').value.trim();
+      const logo = document.getElementById('resLogo').value.trim();
+      const phone = document.getElementById('resPhone').value.trim();
+      const email = document.getElementById('resEmail').value.trim();
+      const address = document.getElementById('resAddress').value.trim();
+      const taxRate = parseFloat(document.getElementById('resTax').value) || 0;
+      const checkInTime = document.getElementById('resInTime').value;
+      const checkOutTime = document.getElementById('resOutTime').value;
+      const receiptHeader = document.getElementById('resHeader').value.trim();
+      const receiptFooter = document.getElementById('resFooter').value.trim();
+
+      if (!name || !resCurrency) {
+        toast('Property name and currency are required', 'error');
+        return;
+      }
+
+      DB.set('hotelConfig', {
+        name, logo, phone, email, address, currency: document.getElementById('resCurrency').value.trim(), taxRate, checkInTime, checkOutTime, receiptHeader, receiptFooter
+      });
+
+      syncBrandPreview(name, logo);
+      renderTopNav('settings');
+      toast('Hotel Configuration saved successfully', 'success');
+    });
+
+    document.getElementById('resetBrandBtn').addEventListener('click', () => {
+      if (confirm("Reset branding details to default settings?")) {
+        DB.set('hotelConfig', defaultBrand);
+        hydrateForm();
+        renderTopNav('settings');
+        toast('Configuration reset to default', 'info');
+      }
+    });
+
+    // Real-time update live preview
+    document.getElementById('resName').addEventListener('input', e => {
+      syncBrandPreview(e.target.value, document.getElementById('resLogo').value);
+    });
+    document.getElementById('resLogo').addEventListener('input', e => {
+      syncBrandPreview(document.getElementById('resName').value, e.target.value);
+    });
+
+    // Staff user accounts CRUD
+    let editingUserId = null;
+    function renderUsersList() {
+      const users = DB.get('users', []);
+      const tbody = document.getElementById('usersTbody');
+
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>
+            <div class="fw-700">${escapeHtml(u.name)}</div>
+            <div class="email">${escapeHtml(u.email)}</div>
+          </td>
+          <td><span class="badge ${u.role==='Admin'?'badge-gold':u.role==='Manager'?'badge-blue':u.role==='Kitchen'?'badge-purple':'badge-gray'}">${u.role}</span></td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="startEditUser(${u.id})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteUserAccount(${u.id},'${escapeHtml(u.name)}')">Delete</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    document.getElementById('addUserBtn').addEventListener('click', () => {
+      const name = document.getElementById('newUserName').value.trim();
+      const email = document.getElementById('newUserEmail').value.trim().toLowerCase();
+      const password = document.getElementById('newUserPassword').value;
+      const role = document.getElementById('newUserRole').value;
+
+      if (!name || !email || !password) {
+        toast('All fields are required to register staff', 'error');
+        return;
+      }
+
+      const users = DB.get('users', []);
+      if (users.some(u => u.email.toLowerCase() === email)) {
+        toast('Email is already registered', 'error');
+        return;
+      }
+
+      const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'ST';
+
+      users.push({
+        id: Date.now(),
+        name,
+        email,
+        password,
+        role,
+        initials
+      });
+
+      DB.set('users', users);
+      renderUsersList();
+
+      document.getElementById('newUserName').value = "";
+      document.getElementById('newUserEmail').value = "";
+      document.getElementById('newUserPassword').value = "";
+      toast('Staff account registered!', 'success');
+    });
+
+    function startEditUser(id) {
+      const users = DB.get('users', []);
+      const u = users.find(x => x.id === id);
+      if (!u) return;
+
+      editingUserId = id;
+      document.getElementById('editUserName').value = u.name;
+      document.getElementById('editUserEmail').value = u.email;
+      document.getElementById('editUserRole').value = u.role;
+      document.getElementById('editUserPassword').value = "";
+      document.getElementById('editBox').classList.add('open');
+      document.getElementById('editBox').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+      document.getElementById('editBox').classList.remove('open');
+      editingUserId = null;
+    });
+
+    document.getElementById('saveEditBtn').addEventListener('click', () => {
+      if (!editingUserId) return;
+
+      const name = document.getElementById('editUserName').value.trim();
+      const email = document.getElementById('editUserEmail').value.trim().toLowerCase();
+      const role = document.getElementById('editUserRole').value;
+      const password = document.getElementById('editUserPassword').value;
+
+      if (!name || !email) {
+        toast('Name and email are required fields', 'error');
+        return;
+      }
+
+      const users = DB.get('users', []);
+      const idx = users.findIndex(u => u.id === editingUserId);
+      if (idx === -1) return;
+
+      // Unique email check
+      if (users.some(u => u.id !== editingUserId && u.email.toLowerCase() === email)) {
+        toast('Email already registered by another staff member', 'error');
+        return;
+      }
+
+      // Admin verification
+      if (users[idx].role === 'Admin' && role !== 'Admin') {
+        const otherAdmins = users.filter(u => u.id !== editingUserId && u.role === 'Admin');
+        if (!otherAdmins.length) {
+          toast('At least one Administrator user must remain active', 'error');
+          return;
+        }
+      }
+
+      const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'ST';
+
+      users[idx] = {
+        ...users[idx],
+        name,
+        email,
+        role,
+        initials,
+        password: password ? password : users[idx].password
+      };
+
+      DB.set('users', users);
+      
+      // Update session if editing self
+      if (editingUserId === currentUser.id) {
+        DB.set('currentUser', users[idx]);
+      }
+
+      document.getElementById('editBox').classList.remove('open');
+      editingUserId = null;
+      renderUsersList();
+      renderTopNav('settings');
+      toast('Staff credentials updated', 'success');
+    });
+
+    function deleteUserAccount(id, name) {
+      if (id === currentUser.id) {
+        toast('You cannot remove your own active login session!', 'error');
+        return;
+      }
+
+      const users = DB.get('users', []);
+      const u = users.find(x => x.id === id);
+      if (u && u.role === 'Admin') {
+        const otherAdmins = users.filter(x => x.id !== id && x.role === 'Admin');
+        if (!otherAdmins.length) {
+          toast('At least one Administrator account must be preserved.', 'error');
+          return;
+        }
+      }
+
+      if (confirm(`Remove staff user account "${name}"?`)) {
+        const updated = users.filter(x => x.id !== id);
+        DB.set('users', updated);
+        toast('Account removed', 'success');
+        renderUsersList();
+      }
+    }
+
+    hydrateForm();
+    renderUsersList();
+
+    window.startEditUser = startEditUser;
+    window.deleteUserAccount = deleteUserAccount;
+  </script>
+</body>
+</html>

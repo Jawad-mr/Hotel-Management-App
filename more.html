@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — More</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .menu-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border-soft);
+      border-radius: var(--radius-lg);
+      padding: 18px 16px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: all var(--trans-fast);
+    }
+
+    .menu-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--c-gold);
+    }
+
+    .menu-card__title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--c-text);
+      margin-bottom: 4px;
+    }
+
+    .menu-card__sub {
+      font-size: 12px;
+      color: var(--c-text-soft);
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero anim-fadeup">
+      <div>
+        <div class="page-hero__title">More Tools</div>
+        <div class="page-hero__sub">Explore all management directories and operational registers of the hotel</div>
+      </div>
+    </div>
+
+    <div class="section-title anim-fadeup anim-delay-1">Core Operations</div>
+    <div class="menu-grid anim-fadeup anim-delay-1" id="coreMenuGrid"></div>
+
+    <div id="managerSection" style="display:none">
+      <div class="section-title anim-fadeup anim-delay-2">Property Management</div>
+      <div class="menu-grid anim-fadeup anim-delay-2" id="managerMenuGrid"></div>
+    </div>
+
+    <div id="adminSection" style="display:none">
+      <div class="section-title anim-fadeup anim-delay-3">System Settings</div>
+      <div class="menu-grid anim-fadeup anim-delay-3" id="adminMenuGrid"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="max-width:320px;margin:20px 0">
+      <button class="btn btn-danger btn-full btn-lg" onclick="Auth.logout()">Sign Out of PMS</button>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('more');
+    renderBottomNav('more');
+
+    const isManager = Auth.can('Manager');
+    const isAdmin = Auth.can('Admin');
+
+    const coreLinks = [
+      { title: 'Dashboard', sub: 'Live occupancy overview and real-time stats', href: 'home.html' },
+      { title: 'Room Grid', sub: 'Status matrix, toggles, and housekeeping', href: 'rooms.html' },
+      { title: 'Reservations', sub: 'Check-in, checkout, and guest booking queue', href: 'reservations.html' },
+      { title: 'Guests Directory', sub: 'Guest profiles, stay history, and contact files', href: 'guests.html' },
+      { title: 'Billing & Folio', sub: 'Extra charges, room invoices, and receipts', href: 'billing.html' }
+    ];
+
+    const managerLinks = [
+      { title: 'Room Services', sub: 'Log room service charges and orders', href: 'services.html' },
+      { title: 'Maintenance', sub: 'Track property repair tickets and issues', href: 'maintenance.html' },
+      { title: 'Expenses', sub: 'Log operational payouts and standing costs', href: 'expenses.html' },
+      { title: 'Reports & P&L', sub: 'Revenue analytics, occupancy, and financial reports', href: 'reports.html' }
+    ];
+
+    const adminLinks = [
+      { title: 'Settings', sub: 'Hotel property details, GST, and user accounts', href: 'settings.html' }
+    ];
+
+    document.getElementById('coreMenuGrid').innerHTML = coreLinks
+      .map(x => `<a href="${x.href}" class="menu-card"><div class="menu-card__title">${x.title}</div><div class="menu-card__sub">${x.sub}</div></a>`)
+      .join('');
+
+    if (isManager) {
+      document.getElementById('managerSection').style.display = 'block';
+      document.getElementById('managerMenuGrid').innerHTML = managerLinks
+        .map(x => `<a href="${x.href}" class="menu-card"><div class="menu-card__title">${x.title}</div><div class="menu-card__sub">${x.sub}</div></a>`)
+        .join('');
+    }
+
+    if (isAdmin) {
+      document.getElementById('adminSection').style.display = 'block';
+      document.getElementById('adminMenuGrid').innerHTML = adminLinks
+        .map(x => `<a href="${x.href}" class="menu-card"><div class="menu-card__title">${x.title}</div><div class="menu-card__sub">${x.sub}</div></a>`)
+        .join('');
+    }
+  </script>
+</body>
+</html>

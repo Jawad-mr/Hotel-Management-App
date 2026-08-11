@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Staff Portal</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    body { min-height: 100vh; display: flex; overflow: hidden; }
+
+    /* ── LEFT PANEL ── */
+    .auth-left {
+      width: 45%;
+      min-height: 100vh;
+      background: linear-gradient(160deg, #1a0f00 0%, #3d2106 45%, #6b3a12 100%);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .auth-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8902a' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .auth-left__blob1 {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(200,144,42,.2) 0%, transparent 70%);
+      bottom: -80px;
+      right: -80px;
+      border-radius: 50%;
+    }
+
+    .auth-left__blob2 {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(200,144,42,.15) 0%, transparent 70%);
+      top: 40px;
+      left: -40px;
+      border-radius: 50%;
+    }
+
+    .auth-brand {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp .6s ease forwards;
+    }
+
+    .auth-brand__icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, rgba(200,144,42,.3), rgba(200,144,42,.1));
+      border: 1px solid rgba(200,144,42,.4);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      backdrop-filter: blur(10px);
+    }
+    .auth-brand__icon svg {
+      width: 36px;
+      height: 36px;
+      stroke: var(--c-gold-light);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .auth-brand__name {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+
+    .auth-brand__name span { color: var(--c-gold-light); }
+
+    .auth-brand__sub {
+      font-size: 14px;
+      color: rgba(255,255,255,.55);
+      font-weight: 500;
+      letter-spacing: .5px;
+      margin-bottom: 48px;
+    }
+
+    .auth-features {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 280px;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp .6s ease .1s forwards;
+      opacity: 0;
+    }
+
+    .auth-feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 12px 16px;
+      backdrop-filter: blur(10px);
+      transition: all .2s;
+    }
+    .auth-feature:hover { background: rgba(255,255,255,.1); }
+
+    .auth-feature__icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(200,144,42,.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .auth-feature__icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--c-gold-light);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .auth-feature__title {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,.9);
+      margin-bottom: 2px;
+    }
+    .auth-feature__desc {
+      font-size: 11px;
+      color: rgba(255,255,255,.45);
+    }
+
+    .auth-left__footer {
+      position: absolute;
+      bottom: 24px;
+      font-size: 11px;
+      color: rgba(255,255,255,.25);
+      z-index: 1;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .auth-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      overflow-y: auto;
+    }
+
+    .auth-form-wrap {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: var(--c-cream-mid);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 32px;
+      border: 1px solid var(--c-border);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--c-text-soft);
+      cursor: pointer;
+      transition: all var(--trans-fast);
+    }
+
+    .auth-tab.active {
+      background: var(--c-surface);
+      color: var(--c-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .auth-panel { display: none; animation: fadeUp .35s ease forwards; }
+    .auth-panel.active { display: block; }
+
+    .auth-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--c-text);
+      margin-bottom: 6px;
+      letter-spacing: -.4px;
+    }
+
+    .auth-desc {
+      font-size: 14px;
+      color: var(--c-text-soft);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap .input-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-text-soft);
+      pointer-events: none;
+    }
+    .input-wrap .input-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--c-text-soft);
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .input-wrap .form-control { padding-left: 40px; }
+
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--c-text-soft);
+      padding: 4px;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--c-text-soft);
+      font-size: 12px;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--c-border);
+    }
+
+    .demo-creds {
+      background: var(--c-gold-pale);
+      border: 1px solid rgba(200,144,42,.25);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 24px;
+    }
+
+    .demo-creds__title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: var(--c-brand-soft);
+      margin-bottom: 8px;
+    }
+
+    .demo-cred {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 6px;
+      border-bottom: 1px solid rgba(200,144,42,.15);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background .15s;
+    }
+    .demo-cred:last-child { border-bottom: none; }
+    .demo-cred:hover { background: rgba(200,144,42,.1); }
+
+    .demo-cred__left { font-size: 12px; font-weight: 600; color: var(--c-text-mid); }
+    .demo-cred__right { font-size: 11px; color: var(--c-text-soft); font-family: monospace; }
+    .demo-cred__badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 99px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .badge-admin { background: #fff3cd; color: #856404; }
+    .badge-cashier { background: #d1e7dd; color: #0a3622; }
+    .badge-staff { background: #cfe2ff; color: #084298; }
+
+    .role-select-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .role-option {
+      border: 1.5px solid var(--c-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--trans-fast);
+      background: transparent;
+      font-family: var(--font-body);
+    }
+    .role-option:hover { border-color: var(--c-gold); }
+    .role-option.selected { border-color: var(--c-gold); background: var(--c-gold-pale); }
+    .role-option__label { font-size: 12px; font-weight: 700; color: var(--c-text-mid); }
+
+    .error-msg {
+      background: #fdecea;
+      border: 1px solid #f5c6c6;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--c-danger);
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .auth-left { display: none; }
+      body { background: var(--c-cream); }
+      .auth-right { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- LEFT -->
+  <div class="auth-left">
+    <div class="auth-left__blob1"></div>
+    <div class="auth-left__blob2"></div>
+    <div class="auth-brand">
+      <div class="auth-brand__icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div class="auth-brand__name">Grand<span>Imperial</span></div>
+      <div class="auth-brand__sub">Hotel Property Management System</div>
+      <div class="auth-features">
+        <div class="auth-feature">
+          <div class="auth-feature__icon">
+            <svg viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-4"/><path d="M12 16v-7"/><path d="M16 16v-10"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature__title">Live Dashboard</div>
+            <div class="auth-feature__desc">Occupancy rates & revenue metrics</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature__icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature__title">Room Grid Matrix</div>
+            <div class="auth-feature__desc">Real-time room status tracking</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature__icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature__title">Reservations Engine</div>
+            <div class="auth-feature__desc">Check-in, checkout & bookings</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature__icon">
+            <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+          </div>
+          <div>
+            <div class="auth-feature__title">Folio Billing</div>
+            <div class="auth-feature__desc">Extra charges & invoice receipts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-left__footer">© 2025 The Grand Imperial Hotel. All rights reserved.</div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="auth-right">
+    <div class="auth-form-wrap anim-fadeup">
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Sign In</button>
+        <button class="auth-tab" id="tabRegister">Create Account</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="auth-panel active" id="panelLogin">
+        <div class="auth-title">Welcome back</div>
+        <div class="auth-desc">Sign in to your Grand Imperial PMS account.</div>
+
+        <div class="demo-creds">
+          <div class="demo-creds__title">Quick Demo Login</div>
+          <div class="demo-cred" onclick="fillCred('admin@hotel.com','admin')">
+            <span class="demo-cred__left">Sanjay Dutt <span class="demo-cred__badge badge-admin">ADMIN</span></span>
+            <span class="demo-cred__right">admin</span>
+          </div>
+          <div class="demo-cred" onclick="fillCred('manager@hotel.com','manager')">
+            <span class="demo-cred__left">Ravi Kumar <span class="demo-cred__badge badge-cashier">MANAGER</span></span>
+            <span class="demo-cred__right">manager</span>
+          </div>
+          <div class="demo-cred" onclick="fillCred('reception@hotel.com','reception')">
+            <span class="demo-cred__left">Neha Sharma <span class="demo-cred__badge badge-staff">RECEPTIONIST</span></span>
+            <span class="demo-cred__right">reception</span>
+          </div>
+        </div>
+
+        <div class="auth-divider">or sign in manually</div>
+
+        <div id="loginError" class="error-msg"></div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </span>
+            <input type="email" class="form-control" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input type="password" class="form-control" id="loginPw" placeholder="Your password" autocomplete="current-password">
+            <button class="pw-toggle" onclick="togglePw('loginPw',this)">Show</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full btn-lg mt-20" id="loginBtn">
+          Sign In →
+        </button>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="auth-panel" id="panelRegister">
+        <div class="auth-title">Create account</div>
+        <div class="auth-desc">Join Grand Imperial Staff Portal. Fill details below.</div>
+
+        <div id="regError" class="error-msg"></div>
+
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input type="text" class="form-control" id="regName" placeholder="Neha Sharma">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </span>
+            <input type="email" class="form-control" id="regEmail" placeholder="you@example.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input type="password" class="form-control" id="regPw" placeholder="Min. 4 characters">
+            <button class="pw-toggle" onclick="togglePw('regPw',this)">Show</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Select Role</label>
+          <div class="role-select-grid">
+            <button class="role-option" data-role="Admin" onclick="selectRole(this)">
+              <div class="role-option__label">Admin</div>
+            </button>
+            <button class="role-option selected" data-role="Receptionist" onclick="selectRole(this)">
+              <div class="role-option__label">Reception</div>
+            </button>
+            <button class="role-option" data-role="Manager" onclick="selectRole(this)">
+              <div class="role-option__label">Manager</div>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full btn-lg mt-8" id="regBtn">
+          Create Account →
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/shared.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (Auth.getUser()) window.location.href = 'home.html';
+
+    // Tabs
+    document.getElementById('tabLogin').addEventListener('click', () => switchTab('login'));
+    document.getElementById('tabRegister').addEventListener('click', () => switchTab('register'));
+
+    function switchTab(t) {
+      document.getElementById('tabLogin').classList.toggle('active', t==='login');
+      document.getElementById('tabRegister').classList.toggle('active', t==='register');
+      document.getElementById('panelLogin').classList.toggle('active', t==='login');
+      document.getElementById('panelRegister').classList.toggle('active', t==='register');
+    }
+
+    // Demo fill
+    function fillCred(e, p) {
+      document.getElementById('loginEmail').value = e;
+      document.getElementById('loginPw').value = p;
+      switchTab('login');
+    }
+
+    // PW toggle
+    function togglePw(id, btn) {
+      const el = document.getElementById(id);
+      el.type = el.type === 'password' ? 'text' : 'password';
+      btn.textContent = el.type === 'password' ? 'Show' : 'Hide';
+    }
+
+    // Role select
+    let selectedRole = 'Receptionist';
+    function selectRole(btn) {
+      document.querySelectorAll('.role-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedRole = btn.dataset.role;
+    }
+
+    // Login
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const pw = document.getElementById('loginPw').value;
+      const errEl = document.getElementById('loginError');
+      if (!email || !pw) { showErr(errEl, 'Please fill in all fields.'); return; }
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      setTimeout(() => {
+        const user = Auth.login(email, pw);
+        if (!user) { showErr(errEl, 'Invalid email or password combination.'); btn.disabled=false; btn.textContent='Sign In →'; }
+        else window.location.href = 'home.html';
+      }, 500);
+    });
+
+    // Register
+    document.getElementById('regBtn').addEventListener('click', () => {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pw = document.getElementById('regPw').value;
+      const errEl = document.getElementById('regError');
+      if (!name||!email||!pw) { showErr(errEl,'Please fill in all fields.'); return; }
+      if (pw.length < 4) { showErr(errEl,'Password must be at least 4 characters.'); return; }
+      const btn = document.getElementById('regBtn');
+      btn.disabled=true; btn.textContent='Creating…';
+      setTimeout(() => {
+        const users = DB.get('users', []);
+        if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+          showErr(errEl, 'Email is already registered.');
+          btn.disabled=false; btn.textContent='Create Account →';
+          return;
+        }
+        const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'ST';
+        const newUser = { id: Date.now(), name, email, password: pw, role: selectedRole, initials };
+        users.push(newUser);
+        DB.set('users', users);
+        DB.set('currentUser', newUser);
+        window.location.href = 'home.html';
+      }, 600);
+    });
+
+    function showErr(el, msg) {
+      el.textContent = msg; el.style.display = 'block';
+      setTimeout(() => el.style.display='none', 4000);
+    }
+
+    // Enter key
+    document.addEventListener('keydown', e => {
+      if (e.key==='Enter') {
+        if (document.getElementById('panelLogin').classList.contains('active')) document.getElementById('loginBtn').click();
+        else document.getElementById('regBtn').click();
+      }
+    });
+  </script>
+</body>
+</html>

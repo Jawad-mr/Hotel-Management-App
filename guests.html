@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Guests Registry</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .guest-history-card {
+      background: var(--c-cream);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 14px;
+      border: 1px solid var(--c-border);
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#3f3f46;--hero-mid:#52525b;--hero-to:#71717a">
+      <div>
+        <div class="page-hero__title">Guests Directory</div>
+        <div class="page-hero__sub">Browse guest profiles, update identification documents, check billing logs, and review booking history</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="openGuestModal()">+ Register Guest Profile</button>
+      </div>
+    </div>
+
+    <!-- Filters Row -->
+    <div class="card card-padded mb-20" style="padding:16px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="search-wrap" style="flex:1">
+          <input type="text" id="searchQ" class="form-control" placeholder="Search guests by name, phone number, email address…">
+        </div>
+        <span class="text-xs text-soft" id="totalGuestsLabel">0 guests registered</span>
+      </div>
+    </div>
+
+    <!-- Guests Table -->
+    <div id="guestsContainer"></div>
+  </div>
+
+  <!-- Guest Add / Edit Modal -->
+  <div class="modal-overlay" id="guestModal">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Register Guest Profile</div>
+        <button class="modal-close" onclick="closeGuestModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="gName" placeholder="e.g. Vikram Aditya" required>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" id="gPhone" placeholder="e.g. 9898012345" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" id="gEmail" placeholder="e.g. vikram@gmail.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Postal / Residential Address</label>
+          <input type="text" class="form-control" id="gAddress" placeholder="e.g. Bandra West, Mumbai">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">ID Document Type</label>
+            <select class="form-control" id="gIdType">
+              <option value="Aadhaar">Aadhaar Card</option>
+              <option value="Passport">Passport</option>
+              <option value="Driver License">Driver License</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Document Number</label>
+            <input type="text" class="form-control" id="gIdNo" placeholder="ID Card Number">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Special requests / service notes</label>
+          <input type="text" class="form-control" id="gNotes" placeholder="e.g. prefers high floor, quiet rooms">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveGuestBtn">Save Profile</button>
+          <button class="btn btn-ghost" onclick="closeGuestModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guest Booking History details modal -->
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <div class="modal-title" id="historyTitle">Guest History File</div>
+        <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="historySummaryCard" style="margin-bottom:16px"></div>
+        <div id="historyLogs"></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('guests');
+    renderBottomNav('more');
+
+    let editingId = null;
+
+    document.getElementById('searchQ').addEventListener('input', render);
+
+    function getFilteredGuests() {
+      const guests = DB.get('guests', []);
+      const search = document.getElementById('searchQ').value.toLowerCase();
+
+      return guests.filter(g => 
+        !search || 
+        g.name.toLowerCase().includes(search) || 
+        g.phone.includes(search) || 
+        (g.email && g.email.toLowerCase().includes(search))
+      );
+    }
+
+    function render() {
+      const filtered = getFilteredGuests();
+      const reservations = DB.get('reservations', []);
+      const container = document.getElementById('guestsContainer');
+      
+      document.getElementById('totalGuestsLabel').textContent = `${filtered.length} guests registered`;
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="empty-state card card-padded">
+            <div class="empty-state__icon">👥</div>
+            <div class="empty-state__title">No guest profiles found</div>
+            <div class="empty-state__desc">Register guests to associate them with reservations and stay logs.</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Guest Full Name</th>
+                <th>Phone No</th>
+                <th>Email Address</th>
+                <th>Identity Details</th>
+                <th>Stays logged</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(g => {
+                const guestStays = reservations.filter(r => r.guestId === g.id);
+                return `
+                  <tr>
+                    <td><strong>${escapeHtml(g.name)}</strong></td>
+                    <td><span class="text-soft">${escapeHtml(g.phone)}</span></td>
+                    <td><span class="text-xs text-soft">${escapeHtml(g.email || 'N/A')}</span></td>
+                    <td><span class="badge badge-blue">${escapeHtml(g.idType || 'Aadhaar')}</span> <span class="text-xs text-soft" style="margin-left:4px">${escapeHtml(g.idNumber || 'N/A')}</span></td>
+                    <td><span class="badge badge-gray">${guestStays.length} Stays</span></td>
+                    <td>
+                      <div style="display:flex;gap:6px">
+                        <button class="btn btn-secondary btn-sm" onclick="openHistoryModal(${g.id})">History File</button>
+                        <button class="btn btn-ghost btn-sm" onclick="openGuestModal(${g.id})">Edit</button>
+                        ${Auth.can('Manager') ? `<button class="btn btn-danger btn-sm" onclick="deleteGuestProfile(${g.id},'${escapeHtml(g.name)}')">Delete</button>` : ''}
+                      </div>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // Modal Add / Edit Guest Profile
+    function openGuestModal(id = null) {
+      editingId = id;
+      document.getElementById('modalTitle').textContent = id ? 'Modify Guest Profile' : 'Register Guest Profile';
+
+      if (id) {
+        const guests = DB.get('guests', []);
+        const g = guests.find(x => x.id === id);
+        if (g) {
+          document.getElementById('gName').value = g.name;
+          document.getElementById('gPhone').value = g.phone;
+          document.getElementById('gEmail').value = g.email || "";
+          document.getElementById('gAddress').value = g.address || "";
+          document.getElementById('gIdType').value = g.idType || "Aadhaar";
+          document.getElementById('gIdNo').value = g.idNumber || "";
+          document.getElementById('gNotes').value = g.notes || "";
+        }
+      } else {
+        document.getElementById('gName').value = "";
+        document.getElementById('gPhone').value = "";
+        document.getElementById('gEmail').value = "";
+        document.getElementById('gAddress').value = "";
+        document.getElementById('gIdType').value = "Aadhaar";
+        document.getElementById('gIdNo').value = "";
+        document.getElementById('gNotes').value = "";
+      }
+      document.getElementById('guestModal').classList.add('open');
+    }
+
+    function closeGuestModal() {
+      document.getElementById('guestModal').classList.remove('open');
+      editingId = null;
+    }
+
+    document.getElementById('saveGuestBtn').addEventListener('click', () => {
+      const name = document.getElementById('gName').value.trim();
+      const phone = document.getElementById('gPhone').value.trim();
+      const email = document.getElementById('gEmail').value.trim();
+      const address = document.getElementById('gAddress').value.trim();
+      const idType = document.getElementById('gIdType').value;
+      const idNumber = document.getElementById('gIdNo').value.trim();
+      const notes = document.getElementById('gNotes').value.trim();
+
+      if (!name || !phone) {
+        toast('Guest name and phone number are required', 'error');
+        return;
+      }
+
+      const guests = DB.get('guests', []);
+      if (editingId) {
+        const idx = guests.findIndex(g => g.id === editingId);
+        if (idx !== -1) {
+          guests[idx] = { ...guests[idx], name, phone, email, address, idType, idNumber, notes };
+        }
+        toast('Guest profile updated', 'success');
+      } else {
+        // Duplicate phone check
+        if (guests.some(g => g.phone === phone)) {
+          toast('Guest phone number already registered', 'error');
+          return;
+        }
+
+        guests.push({
+          id: Date.now(),
+          name, phone, email, address, idType, idNumber, notes
+        });
+        toast('New guest profile registered', 'success');
+      }
+
+      DB.set('guests', guests);
+      closeGuestModal();
+      render();
+    });
+
+    function deleteGuestProfile(id, name) {
+      const conf = confirm(`Unregister guest profile for "${name}"? Booking history will remain.`);
+      if (!conf) return;
+
+      const guests = DB.get('guests', []);
+      const updated = guests.filter(g => g.id !== id);
+      DB.set('guests', updated);
+      toast('Guest profile deleted', 'success');
+      render();
+    }
+
+    // Guest History logs overlay
+    function openHistoryModal(guestId) {
+      const guests = DB.get('guests', []);
+      const reservations = DB.get('reservations', []);
+      
+      const g = guests.find(x => x.id === guestId);
+      if (!g) return;
+
+      const gStays = reservations.filter(r => r.guestId === guestId);
+      const totalSpent = gStays.reduce((sum, r) => sum + (r.isPaid || r.status === 'Checked Out' ? r.totalAmount : r.paidAmount), 0);
+
+      document.getElementById('historyTitle').textContent = `${g.name} — Stay History`;
+
+      document.getElementById('historySummaryCard').innerHTML = `
+        <div class="stat-grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0">
+          <div class="stat-card" style="--accent:var(--c-brand-soft); padding: 12px">
+            <div class="stat-card__label" style="font-size:10px">Total Bookings</div>
+            <div class="stat-card__value" style="font-size:20px">${gStays.length} stays</div>
+          </div>
+          <div class="stat-card" style="--accent:var(--c-success); padding: 12px">
+            <div class="stat-card__label" style="font-size:10px">Cumulative Spend</div>
+            <div class="stat-card__value" style="font-size:20px">${fmt(totalSpent)}</div>
+          </div>
+        </div>
+      `;
+
+      const logsContainer = document.getElementById('historyLogs');
+      if (!gStays.length) {
+        logsContainer.innerHTML = `<div class="empty-state" style="padding:10px"><div class="empty-state__title">No bookings registered for this guest</div></div>`;
+      } else {
+        logsContainer.innerHTML = `
+          <div style="font-size:11px;font-weight:700;color:var(--c-text-soft);margin-bottom:8px">BOOKINGS FILE LIST (${gStays.length}):</div>
+          ${gStays.map(r => {
+            const nights = Math.max(1, Math.round((new Date(r.checkOutDate) - new Date(r.checkInDate)) / 86400000));
+            const statusCls = r.status==='Checked Out'?'badge-green':r.status==='Checked In'?'badge-red':r.status==='Confirmed'?'badge-gold':'badge-gray';
+            return `
+              <div class="guest-history-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <span class="badge badge-gold">${r.reservationNumber}</span>
+                  <span class="badge ${statusCls}">${r.status}</span>
+                </div>
+                <div style="font-size:12px;margin-bottom:2px"><strong>Room ${r.roomNumber}</strong> (${escapeHtml(r.roomTypeName)}) · ${nights} Nights</div>
+                <div style="font-size:11px;color:var(--c-text-soft)">Stay Dates: ${r.checkInDate} to ${r.checkOutDate}</div>
+                <div style="font-size:12px;margin-top:6px;font-weight:700;color:var(--c-brand-soft)">Total Cost: ${fmt(r.totalAmount)} (Paid: ${fmt(r.paidAmount)})</div>
+                <div style="display:flex;justify-content:flex-end;margin-top:8px">
+                  <button class="btn btn-secondary btn-sm" onclick="printReceipt(${r.id})">🖨️ Print Invoice</button>
+                </div>
+              </div>`;
+          }).join('')}
+        `;
+      }
+
+      document.getElementById('historyModal').classList.add('open');
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').classList.remove('open');
+    }
+
+    function printReceipt(resId) {
+      const reservations = DB.get('reservations', []);
+      const r = reservations.find(x => x.id === resId);
+      if (r) printBill(r);
+    }
+
+    // Modal close clicks
+    document.getElementById('guestModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('guestModal')) closeGuestModal();
+    });
+    document.getElementById('historyModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('historyModal')) closeHistoryModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>

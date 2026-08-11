@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Dashboard</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .greeting-bar {
+      background: linear-gradient(135deg, var(--c-brand-mid) 0%, var(--c-brand-soft) 100%);
+      border-radius: var(--radius-xl);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+    }
+    .greeting-bar::before {
+      content: '';
+      position: absolute;
+      right: -26px;
+      top: -26px;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.22), rgba(255,255,255,0));
+    }
+    .greeting-bar__hello {
+      font-size: 13px;
+      font-weight: 500;
+      opacity: .7;
+      letter-spacing: .3px;
+      margin-bottom: 4px;
+    }
+    .greeting-bar__name {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .greeting-bar__date {
+      font-size: 13px;
+      opacity: .6;
+    }
+    .greeting-bar__role {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--c-text);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .quick-action {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border-soft);
+      border-radius: var(--radius-lg);
+      padding: 20px 16px;
+      text-align: center;
+      text-decoration: none;
+      transition: all var(--trans-base);
+      cursor: pointer;
+      display: block;
+    }
+    .quick-action:hover {
+      border-color: var(--c-gold);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .quick-action__icon {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 10px;
+      border-radius: 12px;
+      background: var(--c-cream-mid);
+      border: 1px solid var(--c-border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--trans-fast), border-color var(--trans-fast), background var(--trans-fast);
+    }
+    .quick-action__icon svg {
+      width: 21px;
+      height: 21px;
+      stroke: var(--c-brand-soft);
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      transition: stroke var(--trans-fast), transform var(--trans-fast);
+    }
+    .quick-action:hover .quick-action__icon {
+      border-color: var(--c-gold);
+      background: var(--c-gold-pale);
+      transform: translateY(-2px);
+    }
+    .quick-action:hover .quick-action__icon svg {
+      stroke: var(--c-gold);
+      transform: scale(1.05);
+    }
+    .quick-action__label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--c-text-mid);
+    }
+    .quick-action__sub {
+      font-size: 11px;
+      color: var(--c-text-soft);
+      margin-top: 3px;
+    }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+
+    .recent-list { display: flex; flex-direction: column; gap: 8px; }
+    .recent-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--c-cream);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--c-border-soft);
+      transition: background var(--trans-fast);
+      text-decoration: none;
+      color: var(--c-text-mid);
+    }
+    .recent-item:hover { background: var(--c-gold-pale); }
+    
+    .avatar-circle {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--c-brand-mid), var(--c-brand-soft));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .info-block { flex: 1; min-width: 0; }
+    .info-title { font-size: 12.5px; font-weight: 700; color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .info-meta { font-size: 11px; color: var(--c-text-soft); margin-top: 1px; }
+    .info-amount { font-family: var(--font-numeric); font-weight: 700; color: var(--c-text); font-size: 14px; }
+
+    .chart-card {
+      background: var(--c-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--c-border-soft);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+    }
+    .chart-card__title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: var(--c-text-soft);
+      margin-bottom: 4px;
+    }
+    .chart-card__value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--c-text);
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 800px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <!-- Greeting Welcome -->
+    <div class="greeting-bar anim-fadeup" id="greetingBar">
+      <div class="greeting-bar__hello">Welcome back</div>
+      <div class="greeting-bar__name" id="userNameLabel">Loading...</div>
+      <div class="greeting-bar__date" id="currentDateLabel"></div>
+      <div class="greeting-bar__role" id="userRoleBadge"></div>
+    </div>
+
+    <!-- Stats Cards Grid -->
+    <div class="stat-grid anim-fadeup anim-delay-1" id="liveStats"></div>
+
+    <!-- Quick Operations Links -->
+    <div class="section-title anim-fadeup anim-delay-2">Quick Actions</div>
+    <div class="quick-actions anim-fadeup anim-delay-2" id="quickActionsGrid">
+      <a href="reservations.html?action=new" class="quick-action" id="qaBook">
+        <div class="quick-action__icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="quick-action__label">New Booking</div>
+        <div class="quick-action__sub">Reservations</div>
+      </a>
+      <a href="rooms.html" class="quick-action">
+        <div class="quick-action__icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </div>
+        <div class="quick-action__label">Room Grid</div>
+        <div class="quick-action__sub">Status & Toggles</div>
+      </a>
+      <a href="billing.html" class="quick-action" id="qaBilling">
+        <div class="quick-action__icon">
+          <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        </div>
+        <div class="quick-action__label">Folios & Bills</div>
+        <div class="quick-action__sub">Guest invoicing</div>
+      </a>
+      <a href="guests.html" class="quick-action">
+        <div class="quick-action__icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="quick-action__label">Guests Directory</div>
+        <div class="quick-action__sub">Guest profiles</div>
+      </a>
+      <a href="maintenance.html" class="quick-action" id="qaMaintenance">
+        <div class="quick-action__icon">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div class="quick-action__label">Maintenance</div>
+        <div class="quick-action__sub">Property tickets</div>
+      </a>
+      <a href="reports.html" class="quick-action" id="qaReports">
+        <div class="quick-action__icon">
+          <svg viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-4"/><path d="M12 16v-7"/><path d="M16 16v-10"/></svg>
+        </div>
+        <div class="quick-action__icon-wrapper"></div>
+        <div class="quick-action__label">Reports</div>
+        <div class="quick-action__sub">Analytics & P&L</div>
+      </a>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="section-title anim-fadeup anim-delay-3">Revenue Trends</div>
+    <div class="chart-grid anim-fadeup anim-delay-3">
+      <div class="chart-card">
+        <div class="chart-card__title">Last 7 Days</div>
+        <div class="chart-card__value" id="sevenDayRevenueLabel">₹0</div>
+        <div id="chart7"></div>
+      </div>
+      <div class="chart-card" id="monthChartCard">
+        <div class="chart-card__title">Last 6 Months</div>
+        <div class="chart-card__value" id="sixMonthRevenueLabel">₹0</div>
+        <div id="chart6m"></div>
+      </div>
+    </div>
+
+    <!-- Bottom Lists Split -->
+    <div class="bottom-grid anim-fadeup anim-delay-4">
+      <!-- Arrivals list -->
+      <div>
+        <div class="section-title">Today's Arrivals & Check-ins</div>
+        <div class="card card-padded">
+          <div class="recent-list" id="arrivalsList"></div>
+        </div>
+      </div>
+
+      <!-- Housekeeping Alerts -->
+      <div>
+        <div class="section-title">Housekeeping Queue (Cleaning Required)</div>
+        <div class="card card-padded">
+          <div class="recent-list" id="housekeepingQueue"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('home');
+    renderBottomNav('home');
+
+    document.getElementById('userNameLabel').textContent = user.name;
+    document.getElementById('currentDateLabel').textContent = today();
+    document.getElementById('userRoleBadge').textContent = user.role;
+
+    // Permissions check
+    const isHousekeeper = user.role === 'Housekeeping';
+    const isReceptionist = user.role === 'Receptionist';
+
+    if (isHousekeeper) {
+      if (document.getElementById('qaBook')) document.getElementById('qaBook').style.display = 'none';
+      if (document.getElementById('qaBilling')) document.getElementById('qaBilling').style.display = 'none';
+      if (document.getElementById('qaReports')) document.getElementById('qaReports').style.display = 'none';
+    }
+
+    function renderDashboard() {
+      const rooms = DB.get('rooms', []);
+      const reservations = DB.get('reservations', []);
+      const charges = DB.get('charges', []);
+      const payments = DB.get('payments', []);
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // Stat stats
+      const totalRooms = rooms.length;
+      const occupied = rooms.filter(r => r.status === 'Occupied').length;
+      const available = rooms.filter(r => r.status === 'Available').length;
+      const occPercent = totalRooms ? Math.round((occupied / totalRooms) * 100) : 0;
+
+      const todayArrivals = reservations.filter(r => r.checkInDate === todayStr && r.status !== 'Cancelled');
+      
+      const todayPayments = payments.filter(p => isToday(p.date));
+      const todayRev = todayPayments.reduce((sum, p) => sum + p.amount, 0);
+
+      const cleaningReq = rooms.filter(r => r.status === 'Cleaning' || r.housekeeping === 'Dirty').length;
+
+      document.getElementById('liveStats').innerHTML = [
+        { label: 'Occupancy Rate', value: `${occPercent}%`, sub: `${occupied} of ${totalRooms} rooms occupied`, accent: 'var(--c-info)' },
+        { label: 'Available Rooms', value: available, sub: 'Ready for check-in', accent: 'var(--c-success)' },
+        { label: 'Today\'s Revenue', value: fmt(todayRev), sub: `${todayPayments.length} transactions today`, accent: 'var(--c-gold)' },
+        { label: 'Housekeeping', value: cleaningReq, sub: 'Rooms requiring cleaning', accent: cleaningReq > 0 ? 'var(--c-warn)' : 'var(--c-success)' }
+      ].map(s => `
+        <div class="stat-card" style="--accent:${s.accent}">
+          <div class="stat-card__label">${s.label}</div>
+          <div class="stat-card__value">${s.value}</div>
+          <div class="stat-card__sub">${s.sub}</div>
+        </div>`).join('');
+
+      // 7-day Bar Chart
+      const last7 = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (6 - i));
+        const dStr = d.toISOString().slice(0, 10);
+        const l = d.toLocaleDateString('en-IN', { weekday: 'short' });
+        const v = payments.filter(p => p.date && p.date.startsWith(dStr)).reduce((sum, p) => sum + (p.amount || 0), 0);
+        return { l, v };
+      });
+      document.getElementById('sevenDayRevenueLabel').textContent = fmt(last7.reduce((sum, d) => sum + d.v, 0));
+      renderBarChart('chart7', last7);
+
+      // 6-month Bar Chart
+      const last6m = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
+        const l = d.toLocaleDateString('en-IN', { month: 'short' });
+        const v = payments.filter(p => {
+          const x = new Date(p.date);
+          return x.getMonth() === d.getMonth() && x.getFullYear() === d.getFullYear();
+        }).reduce((sum, p) => sum + (p.amount || 0), 0);
+        return { l, v };
+      });
+      document.getElementById('sixMonthRevenueLabel').textContent = fmt(last6m.reduce((sum, d) => sum + d.v, 0));
+      renderBarChart('chart6m', last6m);
+
+      // Arrivals list
+      const arrivalsContainer = document.getElementById('arrivalsList');
+      if (!todayArrivals.length) {
+        arrivalsContainer.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-state__title">No Scheduled Arrivals</div><div class="empty-state__desc">No check-ins listed for today.</div></div>';
+      } else {
+        arrivalsContainer.innerHTML = todayArrivals.map(res => {
+          const badgeClass = res.status === 'Checked In' ? 'badge-green' : 'badge-gold';
+          return `
+            <a href="reservations.html?id=${res.id}" class="recent-item">
+              <div class="avatar-circle">${res.roomNumber || 'RM'}</div>
+              <div class="info-block">
+                <div class="info-title">${escapeHtml(res.guestName)}</div>
+                <div class="info-meta">Room ${res.roomNumber} · ${res.checkInDate} to ${res.checkOutDate}</div>
+              </div>
+              <span class="badge ${badgeClass}">${res.status}</span>
+            </a>`;
+        }).join('');
+      }
+
+      // Housekeeping queue
+      const dirtyRooms = rooms.filter(r => r.status === 'Cleaning' || r.housekeeping === 'Dirty');
+      const hkContainer = document.getElementById('housekeepingQueue');
+      if (!dirtyRooms.length) {
+        hkContainer.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-state__title">All Rooms Clean</div><div class="empty-state__desc">No pending cleaning tasks.</div></div>';
+      } else {
+        hkContainer.innerHTML = dirtyRooms.map(rm => `
+          <div class="recent-item">
+            <div class="avatar-circle" style="background:var(--c-warn)">${rm.roomNumber}</div>
+            <div class="info-block">
+              <div class="info-title">Room ${rm.roomNumber} (${rm.type})</div>
+              <div class="info-meta">Floor ${rm.floor} · Housekeeping: ${rm.housekeeping || 'Dirty'}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="markRoomClean(${rm.id})">Mark Clean</button>
+          </div>`).join('');
+      }
+    }
+
+    function markRoomClean(roomId) {
+      const rooms = DB.get('rooms', []);
+      const rm = rooms.find(r => r.id === roomId);
+      if (rm) {
+        rm.housekeeping = 'Clean';
+        if (rm.status === 'Cleaning') rm.status = 'Available';
+        DB.set('rooms', rooms);
+        toast(`Room ${rm.roomNumber} marked clean!`, 'success');
+        renderDashboard();
+      }
+    }
+
+    renderDashboard();
+  </script>
+</body>
+</html>

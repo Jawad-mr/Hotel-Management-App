@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Maintenance Logs</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .priority-high { color: var(--c-danger); font-weight: bold; }
+    .priority-medium { color: var(--c-warn); font-weight: bold; }
+    .priority-low { color: var(--c-info); font-weight: bold; }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#3f3f46;--hero-mid:#5b5b66;--hero-to:#7f7f8c">
+      <div>
+        <div class="page-hero__title">Maintenance Logs</div>
+        <div class="page-hero__sub">Log property plumbing issues, electrical reports, lock failures, and track repair tasks</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="openTicketModal()">+ Log New Issue</button>
+      </div>
+    </div>
+
+    <!-- Stats widgets -->
+    <div class="stat-grid mb-20" id="maintenanceStats"></div>
+
+    <!-- Filters Row -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div class="chip-group" id="statusChips">
+        <button class="chip active" onclick="setStatusFilter('All')">All Tickets</button>
+        <button class="chip" onclick="setStatusFilter('Open')">Open</button>
+        <button class="chip" onclick="setStatusFilter('In Progress')">In Progress</button>
+        <button class="chip" onclick="setStatusFilter('Resolved')">Resolved</button>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+
+    <!-- Logs Table -->
+    <div id="ticketsContainer"></div>
+  </div>
+
+  <!-- Create Maintenance Ticket Modal -->
+  <div class="modal-overlay" id="ticketModal">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <div class="modal-title">Log Maintenance Ticket</div>
+        <button class="modal-close" onclick="closeTicketModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Select Room</label>
+          <select class="form-control" id="ticketRoomSelect" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Issue Label</label>
+          <input type="text" class="form-control" id="ticketIssue" placeholder="e.g. AC remote sensor faulty" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority Level</label>
+          <select class="form-control" id="ticketPriority">
+            <option value="Low">Low Priority</option>
+            <option value="Medium" selected>Medium Priority</option>
+            <option value="High">High Priority (Urgent Lockout)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Detailed Remarks</label>
+          <input type="text" class="form-control" id="ticketDesc" placeholder="e.g. Bathroom exhaust fan making heavy noise" required>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveTicketBtn">Log Issue & Lock Room</button>
+          <button class="btn btn-ghost" onclick="closeTicketModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('maintenance');
+    renderBottomNav('more');
+
+    let activeFilter = 'All';
+
+    function setStatusFilter(f) {
+      activeFilter = f;
+      document.querySelectorAll('#statusChips .chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().includes(f) || (f==='All' && btn.textContent.trim()==='All Tickets'));
+      });
+      render();
+    }
+
+    function populateRoomsSelect() {
+      const rooms = DB.get('rooms', []);
+      document.getElementById('ticketRoomSelect').innerHTML = rooms.map(r =>
+        `<option value="${r.id}">Room ${r.roomNumber} (${escapeHtml(r.roomTypeName)})</option>`
+      ).join('');
+    }
+
+    function render() {
+      const maintenance = DB.get('maintenance', []);
+      const container = document.getElementById('ticketsContainer');
+
+      // Statistics counts
+      const openCount = maintenance.filter(t => t.status === 'Open').length;
+      const progressCount = maintenance.filter(t => t.status === 'In Progress').length;
+      const highCount = maintenance.filter(t => t.status !== 'Resolved' && t.priority === 'High').length;
+      const resolvedCount = maintenance.filter(t => t.status === 'Resolved').length;
+
+      document.getElementById('maintenanceStats').innerHTML = [
+        { label: 'Open Repairs', value: openCount, sub: 'unresolved logs', accent: 'var(--c-danger)' },
+        { label: 'In Progress', value: progressCount, sub: 'staff on task', accent: 'var(--c-warn)' },
+        { label: 'Urgent Tickets', value: highCount, sub: 'high priority locks', accent: 'var(--c-brand-soft)' },
+        { label: 'Resolved Tickets', value: resolvedCount, sub: 'total fixes completed', accent: 'var(--c-success)' }
+      ].map(s => `
+        <div class="stat-card" style="--accent:${s.accent}">
+          <div class="stat-card__label">${s.label}</div>
+          <div class="stat-card__value">${s.value}</div>
+          <div class="stat-card__sub">${s.sub}</div>
+        </div>`).join('');
+
+      const filtered = maintenance.filter(t => activeFilter === 'All' || t.status === activeFilter);
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="empty-state card card-padded">
+            <div class="empty-state__icon">🔧</div>
+            <div class="empty-state__title">No maintenance logs found</div>
+            <div class="empty-state__desc">Issues will appear here when reported from the room grids or logged directly.</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Room No</th>
+                <th>Reported Issue</th>
+                <th>Priority</th>
+                <th>Dates Logged / Solved</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(t => {
+                const dateText = `${t.createdDate} ${t.resolvedDate ? '➜ ' + t.resolvedDate : ''}`;
+                
+                const priorityBadge = t.priority === 'High' ? 'badge-red' : t.priority === 'Medium' ? 'badge-gold' : 'badge-blue';
+                const statusBadge = t.status === 'Resolved' ? 'badge-green' : t.status === 'In Progress' ? 'badge-blue' : 'badge-red';
+
+                let actionBtns = "";
+                if (t.status === 'Open') {
+                  actionBtns += `<button class="btn btn-secondary btn-sm" onclick="startTicketRepairs(${t.id})">Start Repairs</button>`;
+                }
+                if (t.status !== 'Resolved') {
+                  actionBtns += `<button class="btn btn-success btn-sm" onclick="resolveTicketRepairs(${t.id})">✅ Mark Fixed</button>`;
+                } else {
+                  actionBtns = `<span class="badge badge-green">SOLVED</span>`;
+                }
+
+                return `
+                  <tr>
+                    <td><strong>Room ${t.roomNumber}</strong></td>
+                    <td>
+                      <div class="fw-700">${escapeHtml(t.issue)}</div>
+                      <div class="text-xs text-soft" style="margin-top:2px">${escapeHtml(t.description)}</div>
+                    </td>
+                    <td><span class="badge ${priorityBadge}">${t.priority}</span></td>
+                    <td><span class="text-xs text-soft">${dateText}</span></td>
+                    <td><span class="badge ${statusBadge}">${t.status}</span></td>
+                    <td>
+                      <div style="display:flex;gap:6px">${actionBtns}</div>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // Modal triggers
+    function openTicketModal() {
+      populateRoomsSelect();
+      document.getElementById('ticketIssue').value = "";
+      document.getElementById('ticketDesc').value = "";
+      document.getElementById('ticketPriority').value = "Medium";
+      document.getElementById('ticketModal').classList.add('open');
+    }
+
+    function closeTicketModal() {
+      document.getElementById('ticketModal').classList.remove('open');
+    }
+
+    document.getElementById('saveTicketBtn').addEventListener('click', () => {
+      const roomId = parseInt(document.getElementById('ticketRoomSelect').value, 10);
+      const issue = document.getElementById('ticketIssue').value.trim();
+      const priority = document.getElementById('ticketPriority').value;
+      const desc = document.getElementById('ticketDesc').value.trim();
+
+      if (!issue || !desc) {
+        toast('Please enter a short issue label and details description', 'error');
+        return;
+      }
+
+      const maintenance = DB.get('maintenance', []);
+      const rooms = DB.get('rooms', []);
+
+      const rIdx = rooms.findIndex(r => r.id === roomId);
+      if (rIdx === -1) return;
+
+      // Lock room status to Maintenance
+      rooms[rIdx].status = 'Maintenance';
+
+      const newTicket = {
+        id: Date.now(),
+        roomId,
+        roomNumber: rooms[rIdx].roomNumber,
+        issue,
+        description: desc,
+        priority,
+        status: 'Open',
+        createdDate: new Date().toISOString().slice(0, 10),
+        resolvedDate: null
+      };
+
+      maintenance.unshift(newTicket);
+
+      DB.set('rooms', rooms);
+      DB.set('maintenance', maintenance);
+      
+      toast(`Room ${rooms[rIdx].roomNumber} locked under Maintenance ticket.`, 'info');
+      closeTicketModal();
+      render();
+    });
+
+    // Repair transitions
+    function startTicketRepairs(ticketId) {
+      const maintenance = DB.get('maintenance', []);
+      const idx = maintenance.findIndex(t => t.id === ticketId);
+      if (idx !== -1) {
+        maintenance[idx].status = 'In Progress';
+        DB.set('maintenance', maintenance);
+        toast('Repairs started on room issue', 'info');
+        render();
+      }
+    }
+
+    function resolveTicketRepairs(ticketId) {
+      const maintenance = DB.get('maintenance', []);
+      const rooms = DB.get('rooms', []);
+
+      const idx = maintenance.findIndex(t => t.id === ticketId);
+      if (idx === -1) return;
+
+      const ticket = maintenance[idx];
+      ticket.status = 'Resolved';
+      ticket.resolvedDate = new Date().toISOString().slice(0, 10);
+
+      // Release physical room back to cleaning queue
+      const rIdx = rooms.findIndex(r => r.id === ticket.roomId);
+      if (rIdx !== -1) {
+        rooms[rIdx].status = 'Cleaning';
+      }
+
+      DB.set('maintenance', maintenance);
+      DB.set('rooms', rooms);
+
+      toast(`Issue resolved. Room ${ticket.roomNumber} sent to Cleaning.`, 'success');
+      render();
+    }
+
+    // Modal click out
+    document.getElementById('ticketModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('ticketModal')) closeTicketModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>

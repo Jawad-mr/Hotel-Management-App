@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Additional Services</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#0369a1;--hero-mid:#0284c7;--hero-to:#0ea5e9">
+      <div>
+        <div class="page-hero__title">Hotel Services Setup</div>
+        <div class="page-hero__sub">Configure extra guest services, room dining items, laundry wash pricing, and transportation costs</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="openServiceModal()">+ Create Service</button>
+      </div>
+    </div>
+
+    <!-- Stats summary -->
+    <div class="stat-grid mb-20" id="serviceStats"></div>
+
+    <!-- Toolbar Filters -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div class="chip-group" id="categoryChips">
+        <button class="chip active" onclick="setCategoryFilter('All')">All Categories</button>
+        <button class="chip" onclick="setCategoryFilter('Room Service')">Room Dining</button>
+        <button class="chip" onclick="setCategoryFilter('Laundry')">Laundry</button>
+        <button class="chip" onclick="setCategoryFilter('Transport')">Transport</button>
+        <button class="chip" onclick="setCategoryFilter('Extra Bed')">Extra Bed</button>
+        <button class="chip" onclick="setCategoryFilter('Misc')">Miscellaneous</button>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+
+    <!-- Services Table list -->
+    <div id="servicesContainer"></div>
+  </div>
+
+  <!-- Add / Edit Service Modal -->
+  <div class="modal-overlay" id="serviceModal">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Create Service</div>
+        <button class="modal-close" onclick="closeServiceModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Service Title</label>
+          <input type="text" class="form-control" id="sName" placeholder="e.g. Guided City Tour" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-control" id="sCategory" required>
+            <option value="Room Service">Room Service / Dining</option>
+            <option value="Laundry">Laundry</option>
+            <option value="Transport">Transport / Shuttle</option>
+            <option value="Extra Bed">Extra Bed / Cradle</option>
+            <option value="Misc">Miscellaneous / Spa</option>
+          </select>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Selling Rate (₹)</label>
+            <input type="number" class="form-control" id="sPrice" placeholder="500" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit description</label>
+            <input type="text" class="form-control" id="sUnit" placeholder="e.g. per serve or per bag" required>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveServiceBtn">Save Service Item</button>
+          <button class="btn btn-ghost" onclick="closeServiceModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('services');
+    renderBottomNav('more');
+
+    let activeFilter = 'All';
+    let editingId = null;
+
+    function setCategoryFilter(cat) {
+      activeFilter = cat;
+      document.querySelectorAll('#categoryChips .chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().includes(cat) || (cat==='All' && btn.textContent.trim()==='All Categories'));
+      });
+      render();
+    }
+
+    function render() {
+      const services = DB.get('services', []);
+      const charges = DB.get('charges', []);
+      const container = document.getElementById('servicesContainer');
+
+      // Aggregate bookings statistics
+      const usageCount = {};
+      charges.forEach(c => {
+        usageCount[c.serviceName] = (usageCount[c.serviceName] || 0) + c.qty;
+      });
+
+      let topService = "None";
+      let topUsage = 0;
+      for (const [name, qty] of Object.entries(usageCount)) {
+        if (qty > topUsage) {
+          topUsage = qty;
+          topService = name;
+        }
+      }
+
+      document.getElementById('serviceStats').innerHTML = [
+        { label: 'Total Services', value: services.length, sub: 'items catalogued', accent: 'var(--c-brand-soft)' },
+        { label: 'Most Ordered Service', value: topService, sub: `${topUsage} times booked in stays`, accent: 'var(--c-gold)' },
+        { label: 'Average Price', value: fmt(services.length ? Math.round(services.reduce((s,x)=>s+x.price,0)/services.length) : 0), sub: 'base services rate', accent: 'var(--c-success)' }
+      ].map(s => `
+        <div class="stat-card" style="--accent:${s.accent}">
+          <div class="stat-card__label">${s.label}</div>
+          <div class="stat-card__value" style="font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.value}</div>
+          <div class="stat-card__sub">${s.sub}</div>
+        </div>`).join('');
+
+      const filtered = services.filter(s => activeFilter === 'All' || s.category === activeFilter);
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="empty-state card card-padded">
+            <div class="empty-state__icon">🍽️</div>
+            <div class="empty-state__title">No services found</div>
+            <div class="empty-state__desc">Configure items to allow waitstaff to add room service and laundry charges.</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Service Name</th>
+                <th>Category</th>
+                <th>Selling Price</th>
+                <th>Unit</th>
+                <th>Usage bookings count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(s => {
+                const count = usageCount[s.name] || 0;
+                const catBadge = s.category === 'Room Service' ? 'badge-blue' : s.category === 'Laundry' ? 'badge-purple' : s.category === 'Transport' ? 'badge-gold' : 'badge-gray';
+                return `
+                  <tr>
+                    <td><strong>${escapeHtml(s.name)}</strong></td>
+                    <td><span class="badge ${catBadge}">${s.category}</span></td>
+                    <td><span class="fw-700 text-brand">${fmt(s.price)}</span></td>
+                    <td><span class="text-xs text-soft">${escapeHtml(s.unit)}</span></td>
+                    <td><span class="badge badge-gray">${count} bookings</span></td>
+                    <td>
+                      <div style="display:flex;gap:6px">
+                        <button class="btn btn-secondary btn-sm" onclick="openServiceModal(${s.id})">Edit</button>
+                        ${Auth.can('Manager') ? `<button class="btn btn-danger btn-sm" onclick="deleteServiceItem(${s.id},'${escapeHtml(s.name)}')">Delete</button>` : ''}
+                      </div>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // Modal Add/Edit
+    function openServiceModal(id = null) {
+      editingId = id;
+      document.getElementById('modalTitle').textContent = id ? 'Modify Service Details' : 'Configure New Service';
+
+      if (id) {
+        const services = DB.get('services', []);
+        const s = services.find(x => x.id === id);
+        if (s) {
+          document.getElementById('sName').value = s.name;
+          document.getElementById('sCategory').value = s.category;
+          document.getElementById('sPrice').value = s.price;
+          document.getElementById('sUnit').value = s.unit || "per serve";
+        }
+      } else {
+        document.getElementById('sName').value = "";
+        document.getElementById('sCategory').value = "Room Service";
+        document.getElementById('sPrice').value = "";
+        document.getElementById('sUnit').value = "per serve";
+      }
+      document.getElementById('serviceModal').classList.add('open');
+    }
+
+    function closeServiceModal() {
+      document.getElementById('serviceModal').classList.remove('open');
+      editingId = null;
+    }
+
+    document.getElementById('saveServiceBtn').addEventListener('click', () => {
+      const name = document.getElementById('sName').value.trim();
+      const category = document.getElementById('sCategory').value;
+      const price = parseFloat(document.getElementById('sPrice').value);
+      const unit = document.getElementById('sUnit').value.trim();
+
+      if (!name || Number.isNaN(price) || price < 0 || !unit) {
+        toast('Please enter valid name, rate, and unit', 'error');
+        return;
+      }
+
+      const services = DB.get('services', []);
+      if (editingId) {
+        const idx = services.findIndex(s => s.id === editingId);
+        if (idx !== -1) {
+          services[idx] = { ...services[idx], name, category, price, unit };
+        }
+        toast('Service details saved', 'success');
+      } else {
+        // Duplicate check
+        if (services.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+          toast('Service title already registered', 'error');
+          return;
+        }
+
+        services.push({
+          id: Date.now(),
+          name, category, price, unit
+        });
+        toast('Additional service category created', 'success');
+      }
+
+      DB.set('services', services);
+      closeServiceModal();
+      render();
+    });
+
+    function deleteServiceItem(id, name) {
+      const conf = confirm(`Unregister service "${name}"? Active charges logs will remain.`);
+      if (!conf) return;
+
+      const services = DB.get('services', []);
+      const updated = services.filter(s => s.id !== id);
+      DB.set('services', updated);
+      toast('Service item removed', 'success');
+      render();
+    }
+
+    // Modal click out
+    document.getElementById('serviceModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('serviceModal')) closeServiceModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>

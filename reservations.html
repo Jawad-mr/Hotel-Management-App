@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Booking Desk</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .search-panel {
+      background: var(--c-surface);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      border: 1px solid var(--c-border);
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#1e3a5f;--hero-mid:#2c6e8f;--hero-to:#3b82f6">
+      <div>
+        <div class="page-hero__title">Reservations Desk</div>
+        <div class="page-hero__sub">Browse the 14-day visual timeline, check room availability, register bookings, and confirm check-ins</div>
+      </div>
+      <div>
+        <button class="btn btn-secondary" onclick="openSearchPanel()">+ New Reservation</button>
+      </div>
+    </div>
+
+    <!-- Filters Row -->
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div class="chip-group" id="viewChips">
+        <button class="chip active" onclick="switchView('timeline')">Visual Timeline</button>
+        <button class="chip" onclick="switchView('list')">Reservations List</button>
+      </div>
+      <div style="flex:1"></div>
+      
+      <div class="search-wrap" style="max-width:240px;margin-right:8px">
+        <input type="text" id="searchQ" class="form-control" placeholder="Search guest name/phone/Res-ID…">
+      </div>
+    </div>
+
+    <!-- ROOM SEARCH PANEL (HIDDEN BY DEFAULT) -->
+    <div class="search-panel hidden" id="searchPanel">
+      <div class="section-title">
+        <span>🔎 Search Room Availability</span>
+        <button class="btn btn-ghost btn-sm" onclick="closeSearchPanel()">✕ Close</button>
+      </div>
+      <div class="grid-3" style="display:grid;grid-template-columns:1fr 1fr 0.8fr 1fr;gap:12px;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Check-In Date</label>
+          <input type="date" class="form-control" id="searchInDate">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Check-Out Date</label>
+          <input type="date" class="form-control" id="searchOutDate">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Adults / Children</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" class="form-control" id="searchAdults" value="2" min="1" max="6">
+            <input type="number" class="form-control" id="searchChildren" value="0" min="0" max="6">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="searchRooms()" style="height:42px">Find Available Rooms</button>
+      </div>
+
+      <!-- Search results list -->
+      <div id="searchResults" style="margin-top:20px"></div>
+    </div>
+
+    <!-- VIEW 1: TIMELINE -->
+    <div id="timelinePanel">
+      <div class="timeline-track" id="timelineContainer"></div>
+    </div>
+
+    <!-- VIEW 2: RESERVATIONS LIST -->
+    <div id="listPanel" class="hidden">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Res-ID</th>
+              <th>Guest Details</th>
+              <th>Stay Dates</th>
+              <th>Room No</th>
+              <th>Bill Total</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="listContainer"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reservation Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <div class="modal-title" id="detailModalTitle">Reservation Details</div>
+        <button class="modal-close" onclick="closeDetailModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="detailBody" style="margin-bottom:20px"></div>
+        <div class="room-actions" id="detailActions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Booking / Guest Assign Modal -->
+  <div class="modal-overlay" id="bookingModal">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-header">
+        <div class="modal-title">Complete Reservation Booking</div>
+        <button class="modal-close" onclick="closeBookingModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="bookingSummaryCard" class="badge badge-blue w-full" style="display:block;padding:12px;margin-bottom:16px;font-size:12px"></div>
+        
+        <!-- Guest Assignment -->
+        <div class="form-group">
+          <label class="form-label">Associate Guest Profile</label>
+          <div style="display:flex;gap:8px">
+            <select class="form-control" id="bookGuestSelect" onchange="syncGuestInputFields()">
+              <option value="">-- Choose Existing Guest --</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--c-text-soft);margin-bottom:10px;text-align:center">OR REGISTER NEW GUEST FOR BOOKING</div>
+
+        <div class="form-group">
+          <label class="form-label">Guest Full Name</label>
+          <input type="text" class="form-control" id="bookGuestName" placeholder="e.g. Vikram Aditya">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" id="bookGuestPhone" placeholder="e.g. 9898012345">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" id="bookGuestEmail" placeholder="e.g. vikram@gmail.com">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">ID Document Type</label>
+            <select class="form-control" id="bookGuestIdType">
+              <option value="Aadhaar">Aadhaar Card</option>
+              <option value="Passport">Passport</option>
+              <option value="Driver License">Driver License</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Document Number</label>
+            <input type="text" class="form-control" id="bookGuestIdNo" placeholder="ID Number">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Discount Rupees (₹)</label>
+          <input type="number" class="form-control" id="bookDiscount" value="0" min="0">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Special requests / service notes</label>
+          <input type="text" class="form-control" id="bookNotes" placeholder="e.g. extra towels, late arrival">
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveBookingBtn">Confirm Booking</button>
+          <button class="btn btn-success" style="flex:1" id="saveCheckinBtn">Check-In Directly</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('reservations');
+    renderBottomNav('reservations');
+
+    let currentView = 'timeline';
+    let timelineDays = 14;
+    let selectedRoomToBook = null;
+    let selectedDatesToBook = null;
+
+    document.getElementById('searchQ').addEventListener('input', render);
+
+    // Initialize date inputs for search
+    const initSearchDates = () => {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+      
+      document.getElementById('searchInDate').value = todayStr;
+      document.getElementById('searchOutDate').value = tomorrowStr;
+    };
+    initSearchDates();
+
+    function switchView(view) {
+      currentView = view;
+      document.getElementById('timelinePanel').classList.toggle('hidden', view !== 'timeline');
+      document.getElementById('listPanel').classList.toggle('hidden', view !== 'list');
+      
+      document.querySelectorAll('#viewChips .chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().toLowerCase().includes(view));
+      });
+      render();
+    }
+
+    function openSearchPanel() {
+      document.getElementById('searchPanel').classList.remove('hidden');
+      document.getElementById('searchResults').innerHTML = "";
+    }
+
+    function closeSearchPanel() {
+      document.getElementById('searchPanel').classList.add('hidden');
+    }
+
+    function populateGuestSelector() {
+      const guests = DB.get('guests', []);
+      document.getElementById('bookGuestSelect').innerHTML = `<option value="">-- Choose Existing Guest --</option>` +
+        guests.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.phone})</option>`).join('');
+    }
+
+    function syncGuestInputFields() {
+      const guestId = parseInt(document.getElementById('bookGuestSelect').value, 10);
+      if (!guestId) return;
+
+      const guests = DB.get('guests', []);
+      const g = guests.find(x => x.id === guestId);
+      if (g) {
+        document.getElementById('bookGuestName').value = g.name;
+        document.getElementById('bookGuestPhone').value = g.phone;
+        document.getElementById('bookGuestEmail').value = g.email;
+        document.getElementById('bookGuestIdType').value = g.idType || "Aadhaar";
+        document.getElementById('bookGuestIdNo').value = g.idNumber || "";
+      }
+    }
+
+    // Overlap validation & available rooms search
+    function searchRooms() {
+      const start = document.getElementById('searchInDate').value;
+      const end = document.getElementById('searchOutDate').value;
+
+      if (!start || !end) {
+        toast('Please enter check-in and check-out dates', 'error');
+        return;
+      }
+
+      if (new Date(end) <= new Date(start)) {
+        toast('Checkout date must be after check-in date', 'error');
+        return;
+      }
+
+      const rooms = DB.get('rooms', []);
+      const availableRooms = [];
+
+      rooms.forEach(r => {
+        const check = checkAvailability(r.id, start, end);
+        if (check.available) {
+          availableRooms.push(r);
+        }
+      });
+
+      const resultsDiv = document.getElementById('searchResults');
+      if (!availableRooms.length) {
+        resultsDiv.innerHTML = `
+          <div class="empty-state" style="padding:20px;border:1px dashed var(--c-border)">
+            <div class="empty-state__title">No rooms available for selected dates</div>
+            <div class="empty-state__desc">Try modifying dates or checking out-of-service/cleaning rooms.</div>
+          </div>`;
+        return;
+      }
+
+      const nights = Math.max(1, Math.round((new Date(end) - new Date(start)) / 86400000));
+
+      resultsDiv.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:var(--c-text-soft);margin-bottom:8px">AVAILABLE ROOMS FOUND (${availableRooms.length}) for ${nights} Nights:</div>
+        <div class="rooms-grid">
+          ${availableRooms.map(r => `
+            <div class="room-card available" style="min-height:auto;padding:12px" onclick="triggerBookingModal(${r.id}, '${start}', '${end}')">
+              <div class="room-card__number">Room ${r.roomNumber}</div>
+              <div class="room-card__type" style="font-size:11px">${escapeHtml(r.roomTypeName)}</div>
+              <div class="room-card__price" style="font-size:12px">${fmt(r.basePrice)}/n (₹${r.basePrice * nights} Total)</div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    function triggerBookingModal(roomId, start, end) {
+      const rooms = DB.get('rooms', []);
+      const r = rooms.find(x => x.id === roomId);
+      if (!r) return;
+
+      selectedRoomToBook = r;
+      selectedDatesToBook = { start, end };
+      populateGuestSelector();
+
+      // Reset form
+      document.getElementById('bookGuestSelect').value = "";
+      document.getElementById('bookGuestName').value = "";
+      document.getElementById('bookGuestPhone').value = "";
+      document.getElementById('bookGuestEmail').value = "";
+      document.getElementById('bookGuestIdNo').value = "";
+      document.getElementById('bookDiscount').value = 0;
+      document.getElementById('bookNotes').value = "";
+
+      const nights = Math.max(1, Math.round((new Date(end) - new Date(start)) / 86400000));
+      document.getElementById('bookingSummaryCard').innerHTML = `
+        🏨 <strong>Room ${r.roomNumber} (${r.roomTypeName})</strong><br>
+        📅 Stay: ${start} to ${end} (${nights} Nights) · Base: ${fmt(r.basePrice)}/night
+      `;
+
+      document.getElementById('bookingModal').classList.add('open');
+    }
+
+    function closeBookingModal() {
+      document.getElementById('bookingModal').classList.remove('open');
+      selectedRoomToBook = null;
+      selectedDatesToBook = null;
+    }
+
+    // CONFIRM BOOKING & DIRECT CHECKIN ACTIONS
+    function saveBooking(directCheckin = false) {
+      const name = document.getElementById('bookGuestName').value.trim();
+      const phone = document.getElementById('bookGuestPhone').value.trim();
+      const email = document.getElementById('bookGuestEmail').value.trim();
+      const idType = document.getElementById('bookGuestIdType').value;
+      const idNo = document.getElementById('bookGuestIdNo').value.trim();
+      const discAmt = parseFloat(document.getElementById('bookDiscount').value) || 0;
+      const notes = document.getElementById('bookNotes').value.trim();
+
+      if (!name || !phone) {
+        toast('Guest name and phone number are required fields', 'error');
+        return;
+      }
+
+      // Check double-booking conflict again
+      const check = checkAvailability(selectedRoomToBook.id, selectedDatesToBook.start, selectedDatesToBook.end);
+      if (!check.available) {
+        toast(`Conflict detected: ${check.reason}`, 'error');
+        return;
+      }
+
+      const guests = DB.get('guests', []);
+      const reservations = DB.get('reservations', []);
+      const config = DB.get('hotelConfig', DEFAULT_CONFIG);
+      const rooms = DB.get('rooms', []);
+
+      // Resolve guest profile
+      let guest = guests.find(g => g.name.toLowerCase() === name.toLowerCase() && g.phone === phone);
+      if (!guest) {
+        guest = { id: Date.now(), name, phone, email, idType, idNumber: idNo };
+        guests.push(guest);
+        DB.set('guests', guests);
+      }
+
+      const nights = Math.max(1, Math.round((new Date(selectedDatesToBook.end) - new Date(selectedDatesToBook.start)) / 86400000));
+      const roomCost = selectedRoomToBook.basePrice * nights;
+      const taxableAmount = Math.max(0, roomCost - discAmt);
+      const taxAmt = Math.round(taxableAmount * (config.taxRate || 12)) / 100;
+      const totalAmount = taxableAmount + taxAmt;
+
+      const resId = Date.now() + 1;
+      const status = directCheckin ? 'Checked In' : 'Confirmed';
+
+      const resObj = {
+        id: resId,
+        reservationNumber: 'RS-' + String(resId).slice(-5),
+        guestId: guest.id,
+        guestName: guest.name,
+        guestPhone: guest.phone,
+        roomId: selectedRoomToBook.id,
+        roomNumber: selectedRoomToBook.roomNumber,
+        roomTypeName: selectedRoomToBook.roomTypeName,
+        checkInDate: selectedDatesToBook.start,
+        checkOutDate: selectedDatesToBook.end,
+        adults: parseInt(document.getElementById('searchAdults').value, 10) || 2,
+        children: parseInt(document.getElementById('searchChildren').value, 10) || 0,
+        status,
+        roomRate: selectedRoomToBook.basePrice,
+        discountAmount: discAmt,
+        taxPercent: config.taxRate || 12,
+        taxAmount: taxAmt,
+        totalAmount,
+        paidAmount: 0,
+        paymentStatus: 'Unpaid',
+        notes,
+        dateBooked: new Date().toISOString()
+      };
+
+      reservations.unshift(resObj);
+      DB.set('reservations', reservations);
+
+      // Create Folio night charges
+      addFolioCharge(resId, `Room Charge (${nights} Nights)`, selectedRoomToBook.basePrice, nights, 'Room');
+
+      // Update room state if direct checkin
+      if (directCheckin) {
+        const rIdx = rooms.findIndex(rm => rm.id === selectedRoomToBook.id);
+        if (rIdx !== -1) {
+          rooms[rIdx].status = 'Occupied';
+          DB.set('rooms', rooms);
+        }
+      } else {
+        // Mark room reserved if checking in today or if current room is empty
+        const rIdx = rooms.findIndex(rm => rm.id === selectedRoomToBook.id);
+        if (rIdx !== -1 && rooms[rIdx].status === 'Available' && selectedDatesToBook.start === new Date().toISOString().slice(0,10)) {
+          rooms[rIdx].status = 'Reserved';
+          DB.set('rooms', rooms);
+        }
+      }
+
+      toast(directCheckin ? 'Guest Checked-In successfully!' : 'Reservation Booking Confirmed!', 'success');
+      closeBookingModal();
+      closeSearchPanel();
+      render();
+    }
+
+    document.getElementById('saveBookingBtn').addEventListener('click', () => saveBooking(false));
+    document.getElementById('saveCheckinBtn').addEventListener('click', () => saveBooking(true));
+
+    // TIMELINE RENDERER
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      const rooms = DB.get('rooms', []);
+      const reservations = DB.get('reservations', []);
+
+      // Date headers (14 days starting today)
+      const dates = [];
+      const now = new Date();
+      for (let i = 0; i < timelineDays; i++) {
+        const d = new Date(now); d.setDate(d.getDate() + i);
+        dates.push(d);
+      }
+
+      let headerHtml = `<div class="timeline-header"><div class="timeline-header__cell">Room Number</div>` +
+        dates.map(d => `<div class="timeline-header__cell">${d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}<br><span style="font-size:8px">${d.toLocaleDateString('en-IN', { weekday: 'short' })}</span></div>`).join('') +
+        `</div>`;
+
+      let rowsHtml = rooms.map(room => {
+        let cellsHtml = "";
+        
+        dates.forEach(d => {
+          const dateStr = d.toISOString().slice(0, 10);
+          
+          // Find booking overlapping this day
+          const activeRes = reservations.find(r => {
+            if (r.roomId !== room.id) return false;
+            if (['Cancelled', 'Checked Out', 'No Show'].replace(/ /g, '_').includes(r.status)) return false;
+            return dateStr >= r.checkInDate && dateStr < r.checkOutDate;
+          });
+
+          let cellContent = "";
+          if (activeRes && dateStr === activeRes.checkInDate) {
+            // Draw booking bar stretch
+            const inDate = new Date(activeRes.checkInDate);
+            const outDate = new Date(activeRes.checkOutDate);
+            const nights = Math.max(1, Math.round((outDate - inDate) / 86400000));
+            
+            // Limit nights stretch to visible window
+            const visibleNights = Math.min(nights, timelineDays - dates.indexOf(d));
+            const widthPx = visibleNights * 60 - 10;
+            const cls = activeRes.status.toLowerCase().replace(/ /g, '_');
+            
+            cellContent = `<div class="timeline-booking ${cls}" style="width:${widthPx}px" onclick="openDetailModal(${activeRes.id})">${escapeHtml(activeRes.guestName)}</div>`;
+          }
+
+          cellsHtml += `<div class="timeline-row__cell">${cellContent}</div>`;
+        });
+
+        return `
+          <div class="timeline-row">
+            <div class="timeline-row__room">
+              Room ${room.roomNumber}<br><span style="font-size:10px;color:var(--c-text-soft)">${escapeHtml(room.roomTypeName)}</span>
+            </div>
+            ${cellsHtml}
+          </div>`;
+      }).join('');
+
+      container.innerHTML = headerHtml + rowsHtml;
+    }
+
+    // Reservation Details Overlay
+    let activeDetailRes = null;
+    function openDetailModal(resId) {
+      const reservations = DB.get('reservations', []);
+      const r = reservations.find(x => x.id === resId);
+      if (!r) return;
+
+      activeDetailRes = r;
+      document.getElementById('detailModalTitle').textContent = `Reservation ${r.reservationNumber}`;
+
+      let statusCls = r.status === 'Checked In' ? 'badge-red' : r.status === 'Checked Out' ? 'badge-green' : r.status === 'Confirmed' ? 'badge-gold' : 'badge-gray';
+      
+      const inDate = new Date(r.checkInDate);
+      const outDate = new Date(r.checkOutDate);
+      const nights = Math.max(1, Math.round((outDate - inDate) / 86400000));
+
+      let bodyHtml = `
+        <div class="text-sm">
+          <p style="margin-bottom:6px"><strong>Guest Name:</strong> ${escapeHtml(r.guestName)} (${r.guestPhone})</p>
+          <p style="margin-bottom:6px"><strong>Room:</strong> Room ${r.roomNumber} (${escapeHtml(r.roomTypeName)})</p>
+          <p style="margin-bottom:6px"><strong>Stay Dates:</strong> ${r.checkInDate} to ${r.checkOutDate} (${nights} Nights)</p>
+          <p style="margin-bottom:6px"><strong>Guests:</strong> ${r.adults} Adults, ${r.children} Children</p>
+          <p style="margin-bottom:6px"><strong>Daily Rate:</strong> ${fmt(r.roomRate)}/night</p>
+          <p style="margin-bottom:6px"><strong>Total Cost:</strong> <span class="fw-700 text-brand">${fmt(r.totalAmount)}</span> (Paid: ${fmt(r.paidAmount)})</p>
+          <p style="margin-bottom:6px"><strong>Status:</strong> <span class="badge ${statusCls}">${r.status}</span></p>
+          ${r.notes ? `<p style="margin-top:10px;font-size:11.5px;color:var(--c-text-soft)">* Notes: "${escapeHtml(r.notes)}"</p>` : ''}
+        </div>`;
+
+      let actionsHtml = "";
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      if (r.status === 'Confirmed') {
+        // Can check in if room housekeeping is OK (not occupied currently)
+        const rooms = DB.get('rooms', []);
+        const roomObj = rooms.find(rm => rm.id === r.roomId);
+        const isRoomBusy = roomObj ? roomObj.status === 'Occupied' : false;
+
+        actionsHtml += `<button class="btn btn-success btn-full" onclick="checkInBooking(${r.id})" ${isRoomBusy?'disabled':''}>Confirm Check-In</button>`;
+        if (isRoomBusy) {
+          actionsHtml += `<div class="text-xs text-soft text-center" style="margin-top:2px;color:var(--c-danger)">* Room is currently Occupied by another stay</div>`;
+        }
+        actionsHtml += `<button class="btn btn-danger btn-full" onclick="cancelBooking(${r.id})">Cancel Reservation</button>`;
+      } else if (r.status === 'Checked In') {
+        actionsHtml += `
+          <a href="billing.html?resId=${r.id}" class="btn btn-primary btn-full">Guest Folio Bill & Checkout</a>
+        `;
+      } else {
+        actionsHtml += `<button class="btn btn-secondary btn-full" onclick="printReceipt(${r.id})">Print Receipt Invoice</button>`;
+      }
+
+      actionsHtml += `<button class="btn btn-ghost btn-full" onclick="closeDetailModal()">Close Window</button>`;
+
+      document.getElementById('detailBody').innerHTML = bodyHtml;
+      document.getElementById('detailActions').innerHTML = actionsHtml;
+      document.getElementById('detailModal').classList.add('open');
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').classList.remove('open');
+      activeDetailRes = null;
+    }
+
+    // CHECKIN / CANCEL TRIGGERS
+    function checkInBooking(resId) {
+      const reservations = DB.get('reservations', []);
+      const rooms = DB.get('rooms', []);
+
+      const rIdx = reservations.findIndex(r => r.id === resId);
+      if (rIdx === -1) return;
+
+      const res = reservations[rIdx];
+      const roomIdx = rooms.findIndex(rm => rm.id === res.roomId);
+      if (roomIdx === -1) return;
+
+      if (rooms[roomIdx].status === 'Occupied') {
+        toast('Room is currently Occupied. Checkout previous guest first.', 'error');
+        return;
+      }
+
+      // Check housekeeping
+      if (rooms[roomIdx].status === 'Cleaning') {
+        const confirmClean = confirm("Room is flagged as Cleaning. Force check-in anyway?");
+        if (!confirmClean) return;
+      }
+
+      reservations[rIdx].status = 'Checked In';
+      rooms[roomIdx].status = 'Occupied';
+
+      DB.set('reservations', reservations);
+      DB.set('rooms', rooms);
+
+      toast(`Guest ${res.guestName} Checked-In successfully to Room ${res.roomNumber}`, 'success');
+      closeDetailModal();
+      render();
+    }
+
+    function cancelBooking(resId) {
+      const conf = confirm("Cancel this reservation booking? The dates will be released.");
+      if (!conf) return;
+
+      const reservations = DB.get('reservations', []);
+      const rooms = DB.get('rooms', []);
+
+      const rIdx = reservations.findIndex(r => r.id === resId);
+      if (rIdx === -1) return;
+
+      const res = reservations[rIdx];
+      reservations[rIdx].status = 'Cancelled';
+
+      // Reset room status if checked in today
+      const roomIdx = rooms.findIndex(rm => rm.id === res.roomId);
+      if (roomIdx !== -1 && rooms[roomIdx].status === 'Reserved') {
+        rooms[roomIdx].status = 'Available';
+        DB.set('rooms', rooms);
+      }
+
+      DB.set('reservations', reservations);
+      toast('Reservation cancelled successfully', 'info');
+      closeDetailModal();
+      render();
+    }
+
+    function printReceipt(resId) {
+      const reservations = DB.get('reservations', []);
+      const r = reservations.find(x => x.id === resId);
+      if (r) printBill(r);
+    }
+
+    // LIST RENDERER
+    function renderList() {
+      const reservations = DB.get('reservations', []);
+      const search = document.getElementById('searchQ').value.toLowerCase();
+      const container = document.getElementById('listContainer');
+
+      const filtered = reservations.filter(r => 
+        !search || 
+        r.guestName.toLowerCase().includes(search) || 
+        r.guestPhone.includes(search) || 
+        r.roomNumber.includes(search) || 
+        r.reservationNumber.toLowerCase().includes(search)
+      );
+
+      if (!filtered.length) {
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center">No reservations matched search query</td></tr>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => {
+        let statusCls = r.status === 'Checked In' ? 'badge-red' : r.status === 'Checked Out' ? 'badge-green' : r.status === 'Confirmed' ? 'badge-gold' : 'badge-gray';
+        return `
+          <tr>
+            <td><span class="badge badge-gold">${r.reservationNumber}</span></td>
+            <td><strong>${escapeHtml(r.guestName)}</strong><br><span class="text-xs text-soft">${r.guestPhone}</span></td>
+            <td><span class="text-xs">${r.checkInDate} to ${r.checkOutDate}</span></td>
+            <td><strong>Room ${r.roomNumber}</strong></td>
+            <td><span class="fw-700 text-brand">${fmt(r.totalAmount)}</span></td>
+            <td><span class="badge ${statusCls}">${r.status}</span></td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="openDetailModal(${r.id})">Manage</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function render() {
+      if (currentView === 'timeline') {
+        renderTimeline();
+      } else {
+        renderList();
+      }
+    }
+
+    // URL parameter parsing
+    const params = new URLSearchParams(window.location.search);
+    const paramAction = params.get('action');
+    const paramRoomId = params.get('roomId');
+    const paramWalkin = params.get('walkin');
+    const paramId = params.get('id');
+
+    if (paramAction === 'new') {
+      openSearchPanel();
+    }
+    if (paramRoomId) {
+      const rId = parseInt(paramRoomId, 10);
+      const rooms = DB.get('rooms', []);
+      const r = rooms.find(rm => rm.id === rId);
+      if (r) {
+        openSearchPanel();
+        document.getElementById('searchInDate').value = new Date().toISOString().slice(0, 10);
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('searchOutDate').value = tomorrow.toISOString().slice(0, 10);
+        triggerBookingModal(r.id, document.getElementById('searchInDate').value, document.getElementById('searchOutDate').value);
+      }
+    }
+    if (paramId) {
+      openDetailModal(parseInt(paramId, 10));
+    }
+
+    // Modal click out
+    document.getElementById('bookingModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('bookingModal')) closeBookingModal();
+    });
+    document.getElementById('detailModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('detailModal')) closeDetailModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>

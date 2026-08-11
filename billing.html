@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Billing Folios</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .billing-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .folio-header-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      background: var(--c-cream);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--c-border-soft);
+      font-size: 12.5px;
+      margin-bottom: 20px;
+    }
+    .grid-column-folio {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#065f46;--hero-mid:#059669;--hero-to:#10b981">
+      <div>
+        <div class="page-hero__title">Billing Folios Desk</div>
+        <div class="page-hero__sub">Settle guest bills, log room service/laundry charges, process checkouts, and reprint receipt invoices</div>
+      </div>
+    </div>
+
+    <div class="billing-layout">
+      <!-- LEFT SIDEBAR: Active Stays Select -->
+      <div class="card card-padded" style="padding:16px">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Active Checked-In Stays</label>
+          <select class="form-control" id="staySelect" onchange="handleStayChange()"></select>
+        </div>
+        <div class="text-xs text-soft" id="activeStaysCount">0 stays currently checked-in</div>
+      </div>
+
+      <!-- RIGHT SIDEBAR: Folio Contents -->
+      <div class="grid-column-folio" id="folioWorkspace">
+        
+        <!-- HEADER SUMMARY -->
+        <div class="card card-padded">
+          <div class="section-title">
+            <span>Room Guest Stay Summary</span>
+            <span class="badge badge-red" id="resStatusBadge">Status</span>
+          </div>
+
+          <div class="folio-header-grid">
+            <div><strong>Guest Name:</strong> <span id="lblGuestName">N/A</span></div>
+            <div><strong>Room No:</strong> Room <span id="lblRoomNumber">N/A</span> (<span id="lblRoomType">N/A</span>)</div>
+            <div><strong>Stay Dates:</strong> <span id="lblStayDates">N/A</span></div>
+            <div><strong>Res ID:</strong> <span id="lblResNumber">N/A</span></div>
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-secondary btn-sm" onclick="openAddChargeModal()">+ Add Service Charge</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">💳 Collect Payment</button>
+            <button class="btn btn-ghost btn-sm" onclick="triggerReprint()">🖨️ Reprint Bill</button>
+          </div>
+        </div>
+
+        <!-- CHARGES & PAYMENTS split grids -->
+        <div class="grid-2">
+          
+          <!-- Folio Charges list -->
+          <div class="card card-padded">
+            <div class="section-title">Room Charges Log</div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Charge Name</th>
+                    <th>Qty / Rate</th>
+                    <th>Subtotal</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="chargesTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Payments list -->
+          <div class="card card-padded">
+            <div class="section-title">Payments Logged</div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Payment Details</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BILLING TOTALS & CHECKOUT PANEL -->
+        <div class="card card-padded">
+          <div class="grid-2">
+            <div class="text-sm">
+              <div style="margin-bottom:6px;display:flex;justify-content:space-between"><span>Charges Subtotal:</span><span id="lblSubtotal">₹0</span></div>
+              <div style="margin-bottom:6px;display:flex;justify-content:space-between;color:var(--c-danger)"><span>Discount applied:</span><span id="lblDiscount">-₹0</span></div>
+              <div style="margin-bottom:6px;display:flex;justify-content:space-between"><span>Tax (GST <span id="lblTaxRate">12</span>%):</span><span id="lblTax">₹0</span></div>
+              <div class="divider" style="margin:10px 0"></div>
+              <div style="font-size:16px;font-weight:700;display:flex;justify-content:space-between"><span>Grand Total Bill:</span><span id="lblGrandTotal" class="text-brand">₹0</span></div>
+              <div style="margin-top:6px;font-size:16px;font-weight:700;display:flex;justify-content:space-between;color:var(--c-success)"><span>Total Payments:</span><span id="lblTotalPaid">₹0</span></div>
+            </div>
+            
+            <div style="border-left:1px solid var(--c-border);padding-left:24px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+              <div style="font-size:11px;font-weight:700;color:var(--c-text-soft);text-transform:uppercase;margin-bottom:4px">Outstanding Balance Due</div>
+              <div style="font-family:var(--font-numeric);font-size:32px;font-weight:800;color:var(--c-danger)" id="lblBalance">₹ 0</div>
+              
+              <div id="checkoutInfo" style="margin-top:10px;text-align:center"></div>
+              
+              <button class="btn btn-success btn-full btn-lg" id="checkoutBtn" onclick="processCheckout()" style="margin-top:16px">Settle & Complete Checkout</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- EMPTY STATE WORKSPACE -->
+      <div class="card card-padded empty-state" id="folioEmptyState">
+        <div class="empty-state__title">No active stay selected</div>
+        <div class="empty-state__desc">Select a checked-in guest room folio from the sidebar to review bills, add laundry charges, or process checkouts.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Charge Modal -->
+  <div class="modal-overlay" id="chargeModal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <div class="modal-title">Log Service Charge</div>
+        <button class="modal-close" onclick="closeAddChargeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Service Type</label>
+          <select class="form-control" id="chargeServiceSelect" onchange="syncServicePrice()"></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Price per unit (₹)</label>
+            <input type="number" class="form-control" id="chargePrice" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantity</label>
+            <input type="number" class="form-control" id="chargeQty" value="1" min="1" max="100">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveChargeBtn">Add Folio Charge</button>
+          <button class="btn btn-ghost" onclick="closeAddChargeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Payment Modal -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <div class="modal-title">Log Settle Payment</div>
+        <button class="modal-close" onclick="closeAddPaymentModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Payment Amount (₹)</label>
+          <input type="number" class="form-control" id="payAmount" min="1" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <select class="form-control" id="payMethod">
+            <option value="UPI">UPI / QR Code</option>
+            <option value="Cash">Cash</option>
+            <option value="Card">Card Swipe</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reference No (Optional)</label>
+          <input type="text" class="form-control" id="payRef" placeholder="e.g. TXN-102932">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="savePaymentBtn">Log Payment Receipt</button>
+          <button class="btn btn-ghost" onclick="closeAddPaymentModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('billing');
+    renderBottomNav('billing');
+
+    let loadedResId = null;
+
+    function populateStaySelect() {
+      const reservations = DB.get('reservations', []);
+      const activeStays = reservations.filter(r => r.status === 'Checked In');
+      
+      document.getElementById('activeStaysCount').textContent = `${activeStays.length} stays currently checked-in`;
+
+      const selector = document.getElementById('staySelect');
+      if (!activeStays.length) {
+        selector.innerHTML = `<option value="">-- No Active Stays --</option>`;
+        return;
+      }
+
+      selector.innerHTML = `<option value="">-- Choose Guest Room --</option>` +
+        activeStays.map(r => `<option value="${r.id}">Room ${r.roomNumber} — ${escapeHtml(r.guestName)}</option>`).join('');
+    }
+
+    function populateServicesSelect() {
+      const services = DB.get('services', []);
+      document.getElementById('chargeServiceSelect').innerHTML = services.map(s =>
+        `<option value="${s.id}">${escapeHtml(s.name)} (₹${s.price})</option>`
+      ).join('');
+    }
+
+    function syncServicePrice() {
+      const serviceId = parseInt(document.getElementById('chargeServiceSelect').value, 10);
+      const services = DB.get('services', []);
+      const s = services.find(x => x.id === serviceId);
+      if (s) {
+        document.getElementById('chargePrice').value = s.price;
+      }
+    }
+
+    function handleStayChange() {
+      const val = document.getElementById('staySelect').value;
+      if (val) {
+        loadFolio(parseInt(val, 10));
+      } else {
+        unloadFolio();
+      }
+    }
+
+    function loadFolio(resId) {
+      loadedResId = resId;
+      document.getElementById('staySelect').value = resId;
+
+      const reservations = DB.get('reservations', []);
+      const r = reservations.find(x => x.id === resId);
+      if (!r) return;
+
+      document.getElementById('folioWorkspace').classList.remove('hidden');
+      document.getElementById('folioEmptyState').classList.add('hidden');
+
+      // Hydrate header
+      document.getElementById('lblGuestName').textContent = r.guestName;
+      document.getElementById('lblRoomNumber').textContent = r.roomNumber;
+      document.getElementById('lblRoomType').textContent = r.roomTypeName;
+      document.getElementById('lblStayDates').textContent = `${r.checkInDate} to ${r.checkOutDate}`;
+      document.getElementById('lblResNumber').textContent = r.reservationNumber;
+      document.getElementById('resStatusBadge').textContent = r.status;
+
+      // Render Tables
+      renderFolioTables(resId);
+    }
+
+    function unloadFolio() {
+      loadedResId = null;
+      document.getElementById('folioWorkspace').classList.add('hidden');
+      document.getElementById('folioEmptyState').classList.remove('hidden');
+    }
+
+    function renderFolioTables(resId) {
+      const reservations = DB.get('reservations', []);
+      const charges = DB.get('charges', []).filter(c => c.reservationId === resId);
+      const payments = DB.get('payments', []).filter(p => p.reservationId === resId);
+      const r = reservations.find(x => x.id === resId);
+      if (!r) return;
+
+      // 1. Charges Table
+      const chargesTbody = document.getElementById('chargesTbody');
+      chargesTbody.innerHTML = charges.map(c => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(c.serviceName)}</strong><br>
+            <span class="badge badge-gray" style="font-size:8px;padding:1px 4px">${c.category}</span>
+          </td>
+          <td>${c.qty} x ${fmt(c.amount)}</td>
+          <td><span class="fw-700">${fmt(c.subtotal)}</span></td>
+          <td>
+            ${c.category !== 'Room' && Auth.can('Manager') ? `
+              <button class="btn btn-danger btn-sm" onclick="removeFolioCharge(${c.id})">✕</button>
+            ` : 'Locked'}
+          </td>
+        </tr>`).join('');
+
+      // 2. Payments Table
+      const paymentsTbody = document.getElementById('paymentsTbody');
+      if (!payments.length) {
+        paymentsTbody.innerHTML = `<tr><td colspan="3" style="text-align:center" class="text-soft">No payments recorded.</td></tr>`;
+      } else {
+        paymentsTbody.innerHTML = payments.map(p => {
+          const dateText = new Date(p.date).toLocaleDateString('en-IN') + ' ' + new Date(p.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+          return `
+            <tr>
+              <td>
+                <div style="font-size:11px">${dateText}</div>
+                <div class="text-xs text-soft" style="margin-top:1px">Ref: ${escapeHtml(p.referenceNo)}</div>
+              </td>
+              <td><span class="badge badge-blue">${p.method}</span></td>
+              <td><span class="fw-700 text-brand">${fmt(p.amount)}</span></td>
+            </tr>`;
+        }).join('');
+      }
+
+      // 3. Billing Summaries
+      const totalAmount = r.totalAmount;
+      const paidAmount = r.paidAmount;
+      const balance = totalAmount - paidAmount;
+
+      document.getElementById('lblSubtotal').textContent = fmt(r.subtotal);
+      document.getElementById('lblDiscount').textContent = `- ${fmt(r.discountAmount)}`;
+      document.getElementById('lblTaxRate').textContent = r.taxPercent;
+      document.getElementById('lblTax').textContent = fmt(r.taxAmount);
+      document.getElementById('lblGrandTotal').textContent = fmt(totalAmount);
+      document.getElementById('lblTotalPaid').textContent = fmt(paidAmount);
+      
+      const balanceLbl = document.getElementById('lblBalance');
+      balanceLbl.textContent = fmt(balance);
+      balanceLbl.style.color = balance > 0 ? 'var(--c-danger)' : 'var(--c-success)';
+
+      // Settle flags
+      const checkoutBtn = document.getElementById('checkoutBtn');
+      const checkoutInfo = document.getElementById('checkoutInfo');
+
+      if (balance > 0) {
+        checkoutBtn.disabled = true;
+        checkoutInfo.innerHTML = `<span style="font-size:12px;color:var(--c-danger);font-weight:700">⚠️ Blocked: Guest has an outstanding balance of ${fmt(balance)}</span>`;
+      } else {
+        checkoutBtn.disabled = false;
+        checkoutInfo.innerHTML = `<span style="font-size:12px;color:var(--c-success);font-weight:700">✅ Ready: Bill fully settled</span>`;
+      }
+    }
+
+    // Modal Charge triggers
+    function openAddChargeModal() {
+      populateServicesSelect();
+      syncServicePrice();
+      document.getElementById('chargeModal').classList.add('open');
+    }
+
+    function closeAddChargeModal() {
+      document.getElementById('chargeModal').classList.remove('open');
+    }
+
+    document.getElementById('saveChargeBtn').addEventListener('click', () => {
+      const sId = parseInt(document.getElementById('chargeServiceSelect').value, 10);
+      const price = parseFloat(document.getElementById('chargePrice').value);
+      const qty = parseInt(document.getElementById('chargeQty').value, 10);
+
+      if (Number.isNaN(price) || price < 0 || Number.isNaN(qty) || qty <= 0) {
+        toast('Please enter a valid price and quantity', 'error');
+        return;
+      }
+
+      const services = DB.get('services', []);
+      const s = services.find(x => x.id === sId);
+      if (!s) return;
+
+      addFolioCharge(loadedResId, s.name, price, qty, s.category);
+      toast(`Added folio service charge: ${s.name}`, 'success');
+      closeAddChargeModal();
+      renderFolioTables(loadedResId);
+    });
+
+    function removeFolioCharge(chargeId) {
+      if (!confirm("Remove this charge row from guest folio?")) return;
+
+      let charges = DB.get('charges', []);
+      charges = charges.filter(c => c.id !== chargeId);
+      DB.set('charges', charges);
+
+      recalculateReservationTotals(loadedResId);
+      toast('Service charge row removed from folio', 'info');
+      renderFolioTables(loadedResId);
+    }
+
+    // Modal Payment triggers
+    function openAddPaymentModal() {
+      const reservations = DB.get('reservations', []);
+      const r = reservations.find(x => x.id === loadedResId);
+      if (!r) return;
+
+      const balance = r.totalAmount - r.paidAmount;
+      document.getElementById('payAmount').value = Math.max(0, balance);
+      document.getElementById('payRef').value = "";
+      document.getElementById('payMethod').value = "UPI";
+      document.getElementById('paymentModal').classList.add('open');
+    }
+
+    function closeAddPaymentModal() {
+      document.getElementById('paymentModal').classList.remove('open');
+    }
+
+    document.getElementById('savePaymentBtn').addEventListener('click', () => {
+      const amt = parseFloat(document.getElementById('payAmount').value);
+      const method = document.getElementById('payMethod').value;
+      const ref = document.getElementById('payRef').value.trim();
+
+      if (Number.isNaN(amt) || amt <= 0) {
+        toast('Please enter a valid payment amount', 'error');
+        return;
+      }
+
+      addPayment(loadedResId, amt, method, ref);
+      toast('Payment logged & folio balanced!', 'success');
+      closeAddPaymentModal();
+      renderFolioTables(loadedResId);
+    });
+
+    // CHECKOUT SUBMIT FUNCTION
+    function processCheckout() {
+      const reservations = DB.get('reservations', []);
+      const rooms = DB.get('rooms', []);
+
+      const rIdx = reservations.findIndex(res => res.id === loadedResId);
+      if (rIdx === -1) return;
+
+      const res = reservations[rIdx];
+      const balance = res.totalAmount - res.paidAmount;
+
+      if (balance > 0) {
+        toast('Cannot checkout. Outstanding balance exists.', 'error');
+        return;
+      }
+
+      const conf = confirm(`Proceed to check-out Room ${res.roomNumber} for ${res.guestName}?`);
+      if (!conf) return;
+
+      // Update reservation status
+      reservations[rIdx].status = 'Checked Out';
+      
+      // Update room status to Cleaning
+      const roomIdx = rooms.findIndex(rm => rm.id === res.roomId);
+      if (roomIdx !== -1) {
+        rooms[roomIdx].status = 'Cleaning';
+      }
+
+      DB.set('reservations', reservations);
+      DB.set('rooms', rooms);
+
+      toast('Check-out completed successfully! Room sent to Cleaning.', 'success');
+
+      // Print bill popup
+      printBill(res);
+
+      // Reload
+      setTimeout(() => {
+        populateStaySelect();
+        unloadFolio();
+      }, 1000);
+    }
+
+    function triggerReprint() {
+      const reservations = DB.get('reservations', []);
+      const r = reservations.find(x => x.id === loadedResId);
+      if (r) printBill(r);
+    }
+
+    // Initialize
+    populateStaySelect();
+    unloadFolio();
+
+    // Handle URL param redirects
+    const params = new URLSearchParams(window.location.search);
+    const paramResId = params.get('resId');
+    if (paramResId) {
+      const rId = parseInt(paramResId, 10);
+      loadFolio(rId);
+    }
+
+    // Modal click outs
+    document.getElementById('chargeModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('chargeModal')) closeAddChargeModal();
+    });
+    document.getElementById('paymentModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('paymentModal')) closeAddPaymentModal();
+    });
+  </script>
+</body>
+</html>

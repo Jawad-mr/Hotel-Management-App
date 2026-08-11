@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Expenses</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap">
+    <div class="page-hero" style="--hero-from:#581c87;--hero-mid:#7e22ce;--hero-to:#9333ea">
+      <div>
+        <div class="page-hero__title">Expenses Registry</div>
+        <div class="page-hero__sub">Log property leasing costs, laundry supplies, energy utility bills, kitchen inventory bills, and staff payrolls</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="openExpenseModal()">+ Add Expense Record</button>
+      </div>
+    </div>
+
+    <!-- Stats summary -->
+    <div class="stat-grid mb-20" id="expenseStats"></div>
+
+    <!-- Filters Toolbar -->
+    <div class="card card-padded mb-20">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Search Remarks</label>
+          <input type="text" class="form-control" id="searchQ" placeholder="e.g. laundry, bill…">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Category</label>
+          <select class="form-control" id="categoryFilter">
+            <option value="">All Categories</option>
+            <option value="Rent">Rent / Lease</option>
+            <option value="Utilities">Utilities (Energy/Water)</option>
+            <option value="Food Waste / Ingredients">Food Ingredients / Kitchen</option>
+            <option value="Salaries">Payroll / Salaries</option>
+            <option value="Laundry Supplies">Laundry Supplies</option>
+            <option value="Maintenance Repairs">Maintenance & Repairs</option>
+            <option value="Miscellaneous">Miscellaneous</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Payment Method</label>
+          <select class="form-control" id="methodFilter">
+            <option value="">All Methods</option>
+            <option value="Cash">Cash</option>
+            <option value="Online">Online / Bank Transfer</option>
+            <option value="Card">Card</option>
+          </select>
+        </div>
+        <div class="flex gap-8" style="justify-content:flex-end">
+          <button class="btn btn-secondary btn-full" onclick="resetFilters()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expenses Table list -->
+    <div id="expensesContainer"></div>
+  </div>
+
+  <!-- Add / Edit Expense Modal -->
+  <div class="modal-overlay" id="expenseModal">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Log Expense Record</div>
+        <button class="modal-close" onclick="closeExpenseModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Amount (₹)</label>
+          <input type="number" class="form-control" id="expAmount" placeholder="0" min="1" required>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-control" id="expCategory" required>
+              <option value="Rent">Rent / Lease</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Food Waste / Ingredients">Food Ingredients / Kitchen</option>
+              <option value="Salaries">Payroll / Salaries</option>
+              <option value="Laundry Supplies">Laundry Supplies</option>
+              <option value="Maintenance Repairs">Maintenance Repairs</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <select class="form-control" id="expMethod" required>
+              <option value="Online">Online / UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Card">Card</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-control" id="expDate" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description / Remarks</label>
+          <input type="text" class="form-control" id="expDesc" placeholder="e.g. Paid electric bill for July" required>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-primary" style="flex:1" id="saveExpenseBtn">Save Expense</button>
+          <button class="btn btn-ghost" onclick="closeExpenseModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const user = Auth.require();
+    renderTopNav('expenses');
+    renderBottomNav('more');
+
+    let editingId = null;
+
+    document.getElementById('searchQ').addEventListener('input', render);
+    document.getElementById('categoryFilter').addEventListener('change', render);
+    document.getElementById('methodFilter').addEventListener('change', render);
+
+    function resetFilters() {
+      document.getElementById('searchQ').value = "";
+      document.getElementById('categoryFilter').value = "";
+      document.getElementById('methodFilter').value = "";
+      render();
+    }
+
+    function getFilteredExpenses() {
+      const expenses = DB.get('expenses', []);
+      const search = document.getElementById('searchQ').value.toLowerCase();
+      const category = document.getElementById('categoryFilter').value;
+      const method = document.getElementById('methodFilter').value;
+
+      return expenses.filter(e => {
+        const sMatch = !search || e.description.toLowerCase().includes(search);
+        const catMatch = !category || e.category === category;
+        const mMatch = !method || e.method === method;
+        return sMatch && catMatch && mMatch;
+      });
+    }
+
+    function render() {
+      const expenses = DB.get('expenses', []);
+      const container = document.getElementById('expensesContainer');
+
+      // Metric calculations
+      const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const thisMonthExpenses = expenses.filter(e => isMonth(e.date));
+      const thisMonthSum = thisMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      const salarySum = expenses.filter(e => e.category === 'Salaries').reduce((sum, e) => sum + e.amount, 0);
+      const utilitiesSum = expenses.filter(e => e.category === 'Utilities').reduce((sum, e) => sum + e.amount, 0);
+
+      // Standing expenses mapping
+      let standingSum = 0;
+      const stg = DB.get('monthlyStandingExpenses', {});
+      Object.values(stg).forEach(s => {
+        standingSum += (s.rent || 0) + (s.electricity || 0) + (s.salary || 0) + (s.other || 0);
+      });
+
+      document.getElementById('expenseStats').innerHTML = [
+        { label: 'Total Spends (All-Time)', value: fmt(totalAmount + standingSum), sub: 'including monthly standing items', accent: 'var(--c-brand-soft)' },
+        { label: 'Current Month Spends', value: fmt(thisMonthSum), sub: `${thisMonthExpenses.length} entries this month`, accent: 'var(--c-gold)' },
+        { label: 'Energy Utility Costs', value: fmt(utilitiesSum), sub: 'electricity & water bills', accent: 'var(--c-danger)' },
+        { label: 'Staff Payroll Paid', value: fmt(salarySum), sub: 'monthly wages disbursed', accent: 'var(--c-success)' }
+      ].map(s => `
+        <div class="stat-card" style="--accent:${s.accent}">
+          <div class="stat-card__label">${s.label}</div>
+          <div class="stat-card__value">${s.value}</div>
+          <div class="stat-card__sub">${s.sub}</div>
+        </div>`).join('');
+
+      const filtered = getFilteredExpenses();
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="empty-state card card-padded">
+            <div class="empty-state__icon">💸</div>
+            <div class="empty-state__title">No expense items matched search query</div>
+            <div class="empty-state__desc">Try checking filters or record a new operational payout.</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Remarks Description</th>
+                <th>Amount</th>
+                <th>Payment Method</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(e => {
+                const dtText = new Date(e.date).toLocaleDateString('en-IN');
+                const catBadge = e.category === 'Salaries' ? 'badge-green' : e.category === 'Utilities' ? 'badge-red' : e.category === 'Laundry Supplies' ? 'badge-purple' : 'badge-gray';
+                return `
+                  <tr>
+                    <td><span class="text-soft">${dtText}</span></td>
+                    <td><span class="badge ${catBadge}">${e.category}</span></td>
+                    <td><strong>${escapeHtml(e.description)}</strong></td>
+                    <td><span class="fw-700 text-brand">${fmt(e.amount)}</span></td>
+                    <td><span class="badge badge-blue">${e.method}</span></td>
+                    <td>
+                      <div style="display:flex;gap:6px">
+                        <button class="btn btn-secondary btn-sm" onclick="openExpenseModal('${e.id}')">Edit</button>
+                        ${Auth.can('Manager') ? `<button class="btn btn-danger btn-sm" onclick="deleteExpenseEntry('${e.id}','${escapeHtml(e.description)}')">Delete</button>` : ''}
+                      </div>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // Modal Add/Edit
+    function openExpenseModal(id = null) {
+      editingId = id;
+      document.getElementById('modalTitle').textContent = id ? 'Edit Expense Record' : 'Log Operational Expense';
+
+      if (id) {
+        const expenses = DB.get('expenses', []);
+        const e = expenses.find(x => x.id === id);
+        if (e) {
+          document.getElementById('expAmount').value = e.amount;
+          document.getElementById('expCategory').value = e.category;
+          document.getElementById('expMethod').value = e.method;
+          document.getElementById('expDate').value = e.date.slice(0, 10);
+          document.getElementById('expDesc').value = e.description || "";
+        }
+      } else {
+        document.getElementById('expAmount').value = "";
+        document.getElementById('expCategory').value = "Miscellaneous";
+        document.getElementById('expMethod').value = "Online";
+        document.getElementById('expDate').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('expDesc').value = "";
+      }
+      document.getElementById('expenseModal').classList.add('open');
+    }
+
+    function closeExpenseModal() {
+      document.getElementById('expenseModal').classList.remove('open');
+      editingId = null;
+    }
+
+    document.getElementById('saveExpenseBtn').addEventListener('click', () => {
+      const amount = parseFloat(document.getElementById('expAmount').value);
+      const category = document.getElementById('expCategory').value;
+      const method = document.getElementById('expMethod').value;
+      const dateVal = document.getElementById('expDate').value;
+      const description = document.getElementById('expDesc').value.trim();
+
+      if (Number.isNaN(amount) || amount <= 0 || !dateVal || !description) {
+        toast('Please fill in amount, date, and remarks', 'error');
+        return;
+      }
+
+      const expenses = DB.get('expenses', []);
+      if (editingId) {
+        const idx = expenses.findIndex(e => e.id === editingId);
+        if (idx !== -1) {
+          expenses[idx] = { ...expenses[idx], amount, category, method, date: new Date(dateVal).toISOString(), description };
+        }
+        toast('Expense entry updated', 'success');
+      } else {
+        expenses.unshift({
+          id: 'EXP-' + String(Date.now()).slice(-5),
+          date: new Date(dateVal).toISOString(),
+          category,
+          amount,
+          description,
+          method
+        });
+        toast('Expense entry saved in ledger', 'success');
+      }
+
+      DB.set('expenses', expenses);
+      closeExpenseModal();
+      render();
+    });
+
+    function deleteExpenseEntry(id, desc) {
+      const conf = confirm(`Delete expense log for "${desc}"?`);
+      if (!conf) return;
+
+      const expenses = DB.get('expenses', []);
+      const updated = expenses.filter(e => e.id !== id);
+      DB.set('expenses', updated);
+      toast('Expense record deleted', 'success');
+      render();
+    }
+
+    // Modal click out
+    document.getElementById('expenseModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('expenseModal')) closeExpenseModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>

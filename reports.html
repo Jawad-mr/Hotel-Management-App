@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Grand Imperial — Reports Desk</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .reports-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .statement-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--c-border-soft);
+      font-size: 13.5px;
+    }
+    .statement-row.total {
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--c-brand-soft);
+      border-top: 2px solid var(--c-border);
+      border-bottom: 2px solid var(--c-border);
+    }
+    .performance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .perf-card {
+      background: var(--c-cream);
+      border: 1px solid var(--c-border-soft);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+    .perf-card__no { font-family: var(--font-display); font-size: 16px; font-weight: 800; }
+    .perf-card__val { font-family: var(--font-numeric); font-size: 13px; font-weight: 700; color: var(--c-brand-soft); margin-top: 4px; }
+    
+    .guard-wrap {
+      max-width: 600px;
+      margin: 80px auto;
+    }
+    
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="page-wrap" id="reportsPage">
+    <div class="page-hero" style="--hero-from:#312e81;--hero-mid:#4338ca;--hero-to:#4f46e5">
+      <div>
+        <div class="page-hero__title">Reports & Metrics Dashboard</div>
+        <div class="page-hero__sub">Analyze occupancy ratios, room earnings, direct services spends, P&L cashflow sheets, and trend indicators</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div class="chip-group" id="rangeChips"></div>
+    </div>
+
+    <div class="reports-layout">
+      <!-- Statistics KPIs -->
+      <div class="stat-grid" id="kpisContainer"></div>
+
+      <!-- Income statement & payment splits -->
+      <div class="grid-2">
+        <div class="card card-padded">
+          <div class="section-title">Income Statement (P&L)</div>
+          <div id="statementBody"></div>
+        </div>
+
+        <div class="card card-padded">
+          <div class="section-title">Payment Splits</div>
+          <div id="paymentsBody"></div>
+        </div>
+      </div>
+
+      <!-- Standing monthly expenses -->
+      <div class="card card-padded">
+        <div class="section-title">Configure Monthly Standing Expenses</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Target Month</label>
+            <input type="month" class="form-control" id="expMonth">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Rent / Lease (₹)</label>
+            <input type="number" class="form-control" id="expRent" value="0" min="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Electricity / Water (₹)</label>
+            <input type="number" class="form-control" id="expElectricity" value="0" min="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Staff Payroll (₹)</label>
+            <input type="number" class="form-control" id="expSalary" value="0" min="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Other Overheads (₹)</label>
+            <input type="number" class="form-control" id="expOther" value="0" min="0">
+          </div>
+        </div>
+        <div class="flex" style="justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-primary" id="saveExpensesBtn">Save Standing Expenses</button>
+        </div>
+      </div>
+
+      <!-- Trend Charts -->
+      <div class="chart-grid">
+        <div class="card card-padded">
+          <div class="section-title">Occupancy Rate % Trends</div>
+          <div id="occupancyTrendChart"></div>
+        </div>
+        <div class="card card-padded">
+          <div class="section-title">Revenue Collection Trends</div>
+          <div id="revenueTrendChart"></div>
+        </div>
+      </div>
+
+      <!-- Room Performance stats -->
+      <div class="card card-padded">
+        <div class="section-title">Room Performance Earnings Ledger</div>
+        <div class="performance-grid" id="performanceContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role locks guard overlay -->
+  <div class="page-wrap guard-wrap hidden" id="guardView">
+    <div class="role-guard">
+      <div class="role-guard__icon">🔒</div>
+      <div class="role-guard__title">Access Restricted</div>
+      Reports analysis is available for Admin and Manager accounts only.
+    </div>
+  </div>
+
+  <nav class="bottomnav" id="bottomnav"></nav>
+
+  <script src="js/shared.js"></script>
+  <script>
+    const currentUser = Auth.require();
+    renderTopNav('reports');
+    renderBottomNav('more');
+
+    const isAuthorized = Auth.can('Manager');
+    if (!isAuthorized) {
+      document.getElementById('reportsPage').classList.add('hidden');
+      document.getElementById('guardView').classList.remove('hidden');
+      toast('Manager/Admin access required', 'error');
+      setTimeout(() => { window.location.href = 'home.html'; }, 1500);
+    }
+
+    let range = 'weekly';
+    let currentExpenseMonth = new Date().toISOString().slice(0, 7);
+
+    const rangeOptions = [
+      { id: 'weekly', label: 'Weekly (Last 7 Days)' },
+      { id: 'monthly', label: 'Monthly (This Month)' },
+      { id: 'all', label: 'All Time' }
+    ];
+
+    function buildRangeChips() {
+      document.getElementById('rangeChips').innerHTML = rangeOptions.map(r =>
+        `<button class="chip${range===r.id?' active':''}" onclick="setRange('${r.id}')">${r.label}</button>`
+      ).join('');
+    }
+
+    function setRange(r) {
+      range = r;
+      buildRangeChips();
+      render();
+    }
+
+    function getBounds() {
+      const now = new Date();
+      if (range === 'weekly') {
+        const start = new Date(now); start.setDate(start.getDate() - 6); start.setHours(0,0,0,0);
+        return { start, end: now };
+      } else if (range === 'monthly') {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0);
+        return { start, end: now };
+      } else {
+        return { start: new Date('2020-01-01'), end: now };
+      }
+    }
+
+    // Expense Config loaders
+    function getStoredExpenses(monthKey) {
+      const all = DB.get('monthlyStandingExpenses', {});
+      return all[monthKey] || { rent: 0, electricity: 0, salary: 0, other: 0 };
+    }
+
+    function saveExpenses(monthKey, data) {
+      const all = DB.get('monthlyStandingExpenses', {});
+      all[monthKey] = data;
+      DB.set('monthlyStandingExpenses', all);
+
+      // Add to general expenses log
+      const expenses = DB.get('expenses', []);
+      const sum = data.rent + data.electricity + data.salary + data.other;
+      expenses.unshift({
+        id: 'EXP-STG-' + Date.now().toString().slice(-4),
+        date: new Date(monthKey + '-01').toISOString(),
+        category: 'Salaries',
+        amount: sum,
+        description: `Standing monthly costs for ${monthKey}`,
+        method: 'Online'
+      });
+      DB.set('expenses', expenses);
+      toast('Standing expenses saved & recorded', 'success');
+      render();
+    }
+
+    document.getElementById('expMonth').addEventListener('change', e => {
+      currentExpenseMonth = e.target.value;
+      loadExpenseForm();
+    });
+
+    document.getElementById('saveExpensesBtn').addEventListener('click', () => {
+      const rent = parseFloat(document.getElementById('expRent').value) || 0;
+      const electricity = parseFloat(document.getElementById('expElectricity').value) || 0;
+      const salary = parseFloat(document.getElementById('expSalary').value) || 0;
+      const other = parseFloat(document.getElementById('expOther').value) || 0;
+      saveExpenses(currentExpenseMonth, { rent, electricity, salary, other });
+    });
+
+    function loadExpenseForm() {
+      document.getElementById('expMonth').value = currentExpenseMonth;
+      const exp = getStoredExpenses(currentExpenseMonth);
+      document.getElementById('expRent').value = exp.rent;
+      document.getElementById('expElectricity').value = exp.electricity;
+      document.getElementById('expSalary').value = exp.salary;
+      document.getElementById('expOther').value = exp.other;
+    }
+
+    // SVG Line chart engine
+    function renderSvgLineChart(containerId, dataPoints, strokeColor = 'var(--c-brand-soft)', fillColor = 'var(--c-gold-pale)', isPercentage = false) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      if (!dataPoints.length) {
+        container.innerHTML = `<div class="empty-state">No graph data available</div>`;
+        return;
+      }
+
+      const width = 500;
+      const height = 160;
+      const padding = 25;
+      
+      const maxVal = Math.max(...dataPoints.map(d => d.v), 1);
+      const minVal = Math.min(...dataPoints.map(d => d.v), 0);
+      const span = maxVal - minVal || 1;
+
+      const stepX = (width - padding * 2) / (dataPoints.length - 1 || 1);
+      
+      const points = dataPoints.map((d, i) => {
+        const x = padding + (i * stepX);
+        const y = height - padding - (((d.v - minVal) / span) * (height - padding * 2));
+        return { x, y, label: d.l, value: d.v };
+      });
+
+      const pathStr = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+      const fillPathStr = `${pathStr} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+
+      const config = DB.get('hotelConfig', DEFAULT_CONFIG);
+      const symbol = isPercentage ? '' : (config.currency || '₹');
+      const suffix = isPercentage ? '%' : '';
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block">
+          <line x1="${padding}" y1="${padding}" x2="${width - padding}" y2="${padding}" stroke="var(--c-border-soft)" stroke-width="1"></line>
+          <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="var(--c-border)" stroke-width="1"></line>
+
+          <path d="${fillPathStr}" fill="${fillColor}" opacity="0.4"></path>
+          <path d="${pathStr}" fill="none" stroke="${strokeColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          
+          ${points.map(p => `
+            <circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--c-surface)" stroke="${strokeColor}" stroke-width="2"></circle>
+          `).join('')}
+
+          ${points.map((p, i) => {
+            const isAlternateHidden = points.length > 8 && i % 2 !== 0;
+            if (isAlternateHidden) return '';
+            return `
+              <text x="${p.x}" y="${height - 6}" text-anchor="middle" fill="var(--c-text-soft)" font-size="9" font-weight="700">${p.label}</text>
+              <text x="${p.x}" y="${Math.max(12, p.y - 8)}" text-anchor="middle" fill="var(--c-text)" font-size="8.5" font-weight="700">${symbol}${Math.round(p.value)}${suffix}</text>
+            `;
+          }).join('')}
+        </svg>
+      `;
+    }
+
+    function render() {
+      const bounds = getBounds();
+      const reservations = DB.get('reservations', []).filter(r => r.status !== 'Cancelled');
+      const charges = DB.get('charges', []);
+      const payments = DB.get('payments', []).filter(p => {
+        const d = new Date(p.date);
+        return d >= bounds.start && d <= bounds.end;
+      });
+      const expenses = DB.get('expenses', []).filter(e => {
+        const d = new Date(e.date);
+        return d >= bounds.start && d <= bounds.end;
+      });
+      const rooms = DB.get('rooms', []);
+
+      // 1. Revenue splits
+      let totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+      let upiSum = payments.filter(p => p.method === 'UPI').reduce((sum, p) => sum + p.amount, 0);
+      let cashSum = payments.filter(p => p.method === 'Cash').reduce((sum, p) => sum + p.amount, 0);
+      let cardSum = payments.filter(p => p.method === 'Card').reduce((sum, p) => sum + p.amount, 0);
+
+      // 2. Folio categorizations
+      let roomChargesTotal = 0;
+      let serviceChargesTotal = 0;
+      let costOfGoods = 0;
+
+      // Filter charges linked to payments inside bounds
+      const resIdsInBounds = new Set(payments.map(p => p.reservationId));
+      charges.forEach(c => {
+        if (resIdsInBounds.has(c.reservationId)) {
+          if (c.category === 'Room') {
+            roomChargesTotal += c.subtotal;
+          } else {
+            serviceChargesTotal += c.subtotal;
+          }
+          // COGS estimate: 15% on rooms service/laundry
+          if (c.category !== 'Room') {
+            costOfGoods += Math.round(c.subtotal * 0.25);
+          } else {
+            costOfGoods += Math.round(c.subtotal * 0.08); // housekeeping washing cost
+          }
+        }
+      });
+
+      // 3. Standing monthly expenses overheads
+      let standingSum = 0;
+      const stgExpenses = DB.get('monthlyStandingExpenses', {});
+      if (range === 'monthly') {
+        const key = new Date().toISOString().slice(0, 7);
+        const stg = stgExpenses[key] || { rent: 0, electricity: 0, salary: 0, other: 0 };
+        standingSum = stg.rent + stg.electricity + stg.salary + stg.other;
+      } else if (range === 'all') {
+        Object.values(stgExpenses).forEach(s => {
+          standingSum += (s.rent || 0) + (s.electricity || 0) + (s.salary || 0) + (s.other || 0);
+        });
+      }
+
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0) + standingSum;
+      const grossProfit = totalRevenue - costOfGoods;
+      const netProfit = grossProfit - totalExpenses;
+
+      // 4. Occupancy Rate % calculation
+      // For selected range, calculate nights occupied
+      let totalNightsInWindow = Math.round((bounds.end - bounds.start) / 86400000) || 1;
+      let totalRoomNightsPossible = rooms.length * totalNightsInWindow;
+      let roomNightsOccupied = 0;
+
+      reservations.forEach(r => {
+        if (['Checked In', 'Checked Out'].includes(r.status)) {
+          const checkIn = new Date(r.checkInDate);
+          const checkOut = new Date(r.checkOutDate);
+          
+          const startBound = checkIn < bounds.start ? bounds.start : checkIn;
+          const endBound = checkOut > bounds.end ? bounds.end : checkOut;
+
+          if (startBound < endBound) {
+            roomNightsOccupied += Math.round((endBound - startBound) / 86400000);
+          }
+        }
+      });
+
+      const avgOccupancyPct = totalRoomNightsPossible ? Math.min(100, Math.round((roomNightsOccupied / totalRoomNightsPossible) * 100)) : 0;
+
+      // KPIs
+      document.getElementById('kpisContainer').innerHTML = [
+        { label: 'Total Revenue Collected', value: fmt(totalRevenue), sub: `${payments.length} payment logs`, accent: 'var(--c-brand-soft)' },
+        { label: 'Operating Expenses', value: fmt(totalExpenses), sub: 'utilities, laundry & wages', accent: 'var(--c-danger)' },
+        { label: 'Room Occupancy Ratio', value: `${avgOccupancyPct}%`, sub: `${roomNightsOccupied} nights sold of ${totalRoomNightsPossible} cap`, accent: 'var(--c-warn)' },
+        { label: 'Net Profit Margin', value: fmt(netProfit), sub: `Profit margin: ${totalRevenue ? Math.round((netProfit/totalRevenue)*100) : 0}%`, accent: netProfit>=0?'var(--c-success)':'var(--c-danger)' }
+      ].map(s => `
+        <div class="stat-card" style="--accent:${s.accent}">
+          <div class="stat-card__label">${s.label}</div>
+          <div class="stat-card__value">${s.value}</div>
+          <div class="stat-card__sub">${s.sub}</div>
+        </div>`).join('');
+
+      // Income Statement
+      document.getElementById('statementBody').innerHTML = `
+        <div class="statement-row"><span>Total Revenue Collected</span><span class="fw-700">${fmt(totalRevenue)}</span></div>
+        <div class="statement-row"><span>(-) Estimated Service Cost of Sales</span><span class="fw-700" style="color:var(--c-danger)">-${fmt(costOfGoods)}</span></div>
+        <div class="statement-row total"><span>Gross Business Profit</span><span>${fmt(grossProfit)}</span></div>
+        <div class="statement-row"><span>(-) Direct Property Purchase/Expenses</span><span class="text-soft">-${fmt(expenses.reduce((s,e)=>s+e.amount,0))}</span></div>
+        <div class="statement-row"><span>(-) Standing Lease & Utility Overheads</span><span class="text-soft">-${fmt(standingSum * 0.4)}</span></div>
+        <div class="statement-row"><span>(-) Employee Wages & Marketing</span><span class="text-soft">-${fmt(standingSum * 0.6)}</span></div>
+        <div class="statement-row total" style="border-bottom:none"><span>Net Profit Cashflow</span><span style="color:${netProfit>=0?'var(--c-success)':'var(--c-danger)'}">${fmt(netProfit)}</span></div>
+      `;
+
+      // Payments Split
+      document.getElementById('paymentsBody').innerHTML = `
+        <div class="statement-row"><span>UPI / QR Receipts</span><span class="fw-700">${fmt(upiSum)}</span></div>
+        <div class="statement-row"><span>Card Swipes Collection</span><span class="fw-700">${fmt(cardSum)}</span></div>
+        <div class="statement-row"><span>Cash at Desk</span><span class="fw-700">${fmt(cashSum)}</span></div>
+        <div class="divider" style="margin:10px 0"></div>
+        <div class="statement-row"><span>Total Payments Audited</span><span class="fw-700 text-brand">${fmt(totalRevenue)}</span></div>
+      `;
+
+      // Room Performance Earnings Ledger
+      const roomSalesAgg = {};
+      rooms.forEach(r => roomSalesAgg[r.roomNumber] = 0);
+      reservations.forEach(r => {
+        if (['Checked In', 'Checked Out'].includes(r.status)) {
+          roomSalesAgg[r.roomNumber] = (roomSalesAgg[r.roomNumber] || 0) + r.totalAmount;
+        }
+      });
+
+      document.getElementById('performanceContainer').innerHTML = Object.entries(roomSalesAgg).map(([roomNo, sum]) => `
+        <div class="perf-card">
+          <div class="perf-card__no">Room ${roomNo}</div>
+          <div class="perf-card__val">${fmt(sum)}</div>
+        </div>`).join('');
+
+      // Trend data builders
+      const trends = getTrendData(bounds);
+      renderBarChart('occupancyTrendChart', trends.occupancyPoints);
+      renderBarChart('revenueTrendChart', trends.revenuePoints);
+    }
+
+    function getTrendData(bounds) {
+      const reservations = DB.get('reservations', []).filter(r => r.status !== 'Cancelled');
+      const payments = DB.get('payments', []);
+      const roomsCount = DB.get('rooms', []).length || 1;
+      
+      const occupancyPoints = [];
+      const revenuePoints = [];
+
+      if (range === 'weekly') {
+        // Last 7 days
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(); d.setDate(d.getDate() - i);
+          const dayStr = d.toISOString().slice(0, 10);
+          const label = d.toLocaleDateString('en-IN', { weekday: 'short' });
+
+          // Occupied count this day
+          let dailyOccupied = 0;
+          reservations.forEach(r => {
+            if (['Checked In', 'Checked Out'].includes(r.status) && dayStr >= r.checkInDate && dayStr < r.checkOutDate) {
+              dailyOccupied++;
+            }
+          });
+          const occPct = Math.min(100, Math.round((dailyOccupied / roomsCount) * 100));
+          occupancyPoints.push({ l: label, v: occPct });
+
+          // Revenue payments logged this day
+          let revSum = 0;
+          payments.forEach(p => {
+            if (new Date(p.date).toDateString() === d.toDateString()) {
+              revSum += p.amount;
+            }
+          });
+          revenuePoints.push({ l: label, v: revSum });
+        }
+      } else {
+        // Last 6 months
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(); d.setMonth(d.getMonth() - i);
+          const label = d.toLocaleDateString('en-IN', { month: 'short' });
+
+          let revSum = 0;
+          payments.forEach(p => {
+            const pd = new Date(p.date);
+            if (pd.getMonth() === d.getMonth() && pd.getFullYear() === d.getFullYear()) {
+              revSum += p.amount;
+            }
+          });
+          revenuePoints.push({ l: label, v: revSum });
+
+          // Avg occupancy in month
+          let occupiedDays = 0;
+          const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+          const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+          const totalDays = monthEnd.getDate();
+
+          reservations.forEach(r => {
+            if (['Checked In', 'Checked Out'].includes(r.status)) {
+              const inDate = new Date(r.checkInDate);
+              const outDate = new Date(r.checkOutDate);
+
+              const start = inDate < monthStart ? monthStart : inDate;
+              const end = outDate > monthEnd ? monthEnd : outDate;
+
+              if (start < end) {
+                occupiedDays += Math.round((end - start) / 86400000);
+              }
+            }
+          });
+          const occPct = Math.min(100, Math.round((occupiedDays / (roomsCount * totalDays)) * 100));
+          occupancyPoints.push({ l: label, v: occPct });
+        }
+      }
+
+      return { occupancyPoints, revenuePoints };
+    }
+
+    buildRangeChips();
+    loadExpenseForm();
+    render();
+  </script>
+</body>
+</html>
