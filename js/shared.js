@@ -376,6 +376,14 @@ const Auth = {
   }
 };
 
+// ─── THEME MANAGER ─────────────────────────────────────────────────────────────
+const Theme = {
+  get() { return DB.get('theme', 'light'); },
+  set(t) { DB.set('theme', t); document.documentElement.setAttribute('data-theme', t); },
+  toggle() { const t = this.get() === 'light' ? 'dark' : 'light'; this.set(t); return t; },
+  apply() { document.documentElement.setAttribute('data-theme', this.get()); }
+};
+
 // Date & Formatting helpers
 function fmt(amount) {
   const cfg = DB.get('hotelConfig', DEFAULT_CONFIG);
@@ -764,5 +772,6 @@ function renderBarChart(containerId, data) {
   </div>`;
 }
 
-// Seed on library import
+// Theme & Seed on library import
+Theme.apply();
 seedDatabase();

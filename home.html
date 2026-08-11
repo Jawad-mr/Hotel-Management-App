@@ -342,7 +342,7 @@
       const todayArrivals = reservations.filter(r => r.checkInDate === todayStr && r.status !== 'Cancelled');
       
       const todayPayments = payments.filter(p => isToday(p.date));
-      const todayRev = todayPayments.reduce((sum, p) => sum + p.amount, 0);
+      const todayRev = todayPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
       const cleaningReq = rooms.filter(r => r.status === 'Cleaning' || r.housekeeping === 'Dirty').length;
 
